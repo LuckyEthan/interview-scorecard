@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试评分卡 Pro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg0:#f0f2f5;--bg1:#ffffff;--bg2:#f7f8fa;--bg3:#e8ecf0;
+  --text1:#1a1a2e;--text2:#555770;--text3:#8888a0;
+  --pri:#4f46e5;--pri2:#6366f1;--pri-light:rgba(79,70,229,.08);
+  --green:#10b981;--orange:#f59e0b;--red:#ef4444;
+  --radius:12px;--shadow:0 2px 12px rgba(0,0,0,.06);
+  --trans:all .25s ease;
+}
+[data-theme="dark"]{
+  --bg0:#0f0f1a;--bg1:#1a1a2e;--bg2:#25253d;--bg3:#33335a;
+  --text1:#e8e8f0;--text2:#a0a0c0;--text3:#6868a0;
+  --pri:#818cf8;--pri2:#a5b4fc;--pri-light:rgba(129,140,248,.12);
+  --shadow:0 2px 12px rgba(0,0,0,.3);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg0);color:var(--text1);line-height:1.6;transition:var(--trans)}
+a{color:var(--pri);text-decoration:none}
+
+/* Top Bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 28px;background:var(--bg1);border-bottom:1px solid var(--bg3);position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.topbar .logo{font-size:20px;font-weight:700;color:var(--pri);display:flex;align-items:center;gap:8px}
+.topbar .logo svg{width:28px;height:28px}
+.topbar-actions{display:flex;align-items:center;gap:12px}
+.theme-toggle{background:none;border:none;cursor:pointer;font-size:20px;padding:6px;border-radius:8px;transition:var(--trans)}
+.theme-toggle:hover{background:var(--bg2)}
+@keyframes aiPulse{0%,100%{box-shadow:0 2px 8px rgba(245,158,11,.3)}50%{box-shadow:0 2px 16px rgba(245,158,11,.5)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+#aiStatusBtn.ai-connected{background:linear-gradient(135deg,var(--green),#06b6d4)!important;animation:none!important;box-shadow:0 2px 8px rgba(16,185,129,.3)!important}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:var(--trans)}
+.btn-pri{background:var(--pri);color:#fff}.btn-pri:hover{background:var(--pri2);transform:translateY(-1px)}
+.btn-out{background:transparent;border:1.5px solid var(--pri);color:var(--pri)}.btn-out:hover{background:var(--pri-light)}
+.btn-ghost{background:var(--bg2);color:var(--text2)}.btn-ghost:hover{background:var(--bg3)}
+.btn-sm{padding:5px 12px;font-size:13px}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{opacity:.85}
+
+/* Layout */
+.container{max-width:1100px;margin:0 auto;padding:28px 20px}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg1);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px;transition:var(--trans)}
+.card:hover{box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.section-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* Home Page */
+.hero{text-align:center;padding:48px 20px}
+.hero h1{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--pri),#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.hero p{color:var(--text2);font-size:16px;max-width:560px;margin:0 auto 32px}
+.workflow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin:32px 0}
+.wf-step{text-align:center;padding:24px 16px;border-radius:var(--radius);background:var(--bg1);box-shadow:var(--shadow);position:relative}
+.wf-step .step-num{width:36px;height:36px;border-radius:50%;background:var(--pri);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-bottom:12px}
+.wf-step h3{font-size:15px;margin-bottom:6px}
+.wf-step p{font-size:13px;color:var(--text3)}
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px}
+.tpl-card{padding:20px;border-radius:var(--radius);background:var(--bg2);cursor:pointer;transition:var(--trans);border:2px solid transparent;position:relative}
+.tpl-card:hover{border-color:var(--pri);transform:translateY(-2px);box-shadow:var(--shadow)}
+.tpl-card .tpl-icon{font-size:32px;margin-bottom:8px}
+.tpl-card h4{font-size:15px;margin-bottom:4px}
+.tpl-card p{font-size:12px;color:var(--text3)}
+.tpl-card .tpl-delete{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,.1);color:var(--red);border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--trans)}
+.tpl-card:hover .tpl-delete{opacity:1}
+.tpl-card .tpl-delete:hover{background:rgba(239,68,68,.2);transform:scale(1.1)}
+.tpl-card.saved-card{border:1.5px dashed var(--pri);background:var(--pri-light)}
+.tpl-card.saved-card:hover{border-style:solid}
+.saved-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:var(--pri);color:#fff;font-weight:600;margin-bottom:6px}
+.empty-saved{text-align:center;padding:32px 20px;color:var(--text3);font-size:13px;border:2px dashed var(--bg3);border-radius:var(--radius)}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg1);border-radius:var(--radius);padding:28px;width:90%;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+.modal h2{font-size:20px;margin-bottom:16px}
+.modal textarea{width:100%;min-height:200px;padding:12px;border:1.5px solid var(--bg3);border-radius:8px;font-family:monospace;font-size:13px;background:var(--bg2);color:var(--text1);resize:vertical}
+.modal-actions{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+
+/* Scorecard */
+.sc-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.sc-info h2{font-size:22px;font-weight:700}
+.sc-info p{color:var(--text3);font-size:13px;margin-top:4px}
+.sc-meta{display:flex;gap:12px;flex-wrap:wrap}
+.sc-meta input{padding:8px 12px;border:1.5px solid var(--bg3);border-radius:8px;font-size:14px;background:var(--bg2);color:var(--text1);width:180px}
+.dimension{margin-bottom:24px}
+.dim-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--pri-light);border-radius:8px;margin-bottom:12px}
+.dim-header h3{font-size:16px;font-weight:600;color:var(--pri)}
+.dim-score{font-size:14px;font-weight:600;color:var(--text2)}
+.eval-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-radius:8px;margin-bottom:6px;background:var(--bg2);transition:var(--trans)}
+.eval-item:hover{background:var(--bg3)}
+.eval-item .item-label{font-size:14px;flex:1}
+.eval-item .item-guide{font-size:11px;color:var(--text3);margin-left:4px}
+
+/* Stars */
+.stars{display:inline-flex;gap:2px;cursor:pointer}
+.stars svg{width:22px;height:22px;fill:var(--bg3);transition:fill .15s}
+.stars svg.active{fill:var(--orange)}
+.stars svg.preview{fill:#fbbf24}
+.star-val{font-size:13px;color:var(--text3);min-width:28px;text-align:center;margin-left:4px}
+
+/* Behavioral Evidence */
+.evidence-box{margin-top:8px}
+.evidence-box textarea{width:100%;min-height:60px;padding:10px;border:1.5px solid var(--bg3);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);resize:vertical}
+.evidence-box label{font-size:12px;color:var(--text3);margin-bottom:4px;display:block}
+
+/* Score Summary */
+.score-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:20px 0}
+.score-card{text-align:center;padding:20px;border-radius:var(--radius);background:var(--bg2)}
+.score-card .sc-val{font-size:36px;font-weight:800}
+.score-card .sc-label{font-size:12px;color:var(--text3);margin-top:4px}
+.sc-val.high{color:var(--green)}.sc-val.mid{color:var(--orange)}.sc-val.low{color:var(--red)}
+
+/* Strengths / Risks */
+.sr-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.sr-box{padding:16px;border-radius:8px}
+.sr-box.strengths{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2)}
+.sr-box.risks{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)}
+.sr-box h4{font-size:14px;font-weight:600;margin-bottom:8px}
+.sr-box li{font-size:13px;color:var(--text2);margin-bottom:4px}
+
+/* Compare */
+.compare-filter{margin-bottom:16px}
+.compare-filter label{font-size:13px;color:var(--text3);margin-right:8px}
+.compare-filter select{padding:6px 12px;border:1.5px solid var(--bg3);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);cursor:pointer;min-width:160px}
+.compare-filter select:focus{border-color:var(--pri);outline:none}
+.compare-group{margin-bottom:16px}
+.compare-group-title{font-size:13px;font-weight:600;color:var(--pri);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.compare-group-title .group-count{font-size:11px;color:var(--text3);font-weight:400}
+.compare-select{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.cand-chip{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1.5px solid var(--bg3);background:var(--bg2);transition:var(--trans);display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.cand-chip .chip-name{font-weight:500}
+.cand-chip .chip-pos{font-size:10px;color:var(--text3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cand-chip.selected{border-color:var(--pri);background:var(--pri-light);color:var(--pri);font-weight:600}
+.cand-chip.selected .chip-pos{color:var(--pri2)}
+.compare-select-all{font-size:12px;color:var(--pri);cursor:pointer;margin-left:8px;text-decoration:underline}
+.compare-result{margin-top:20px}
+.rank-list{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.rank-card{padding:16px 20px;border-radius:var(--radius);min-width:160px;text-align:center}
+.rank-pos{font-size:24px;font-weight:800}
+.rank-name{font-size:14px;margin:4px 0;font-weight:600}
+.rank-job{font-size:11px;color:var(--text3);margin-bottom:2px}
+.rank-score{font-size:13px;color:var(--text2)}
+.dim-compare{margin:16px 0}
+.dim-bar-group{margin-bottom:12px}
+.dim-bar-label{font-size:13px;font-weight:600;margin-bottom:6px}
+.dim-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.dim-bar-name{font-size:12px;width:70px;text-align:right;color:var(--text2)}
+.dim-bar-track{flex:1;height:18px;background:var(--bg3);border-radius:9px;overflow:hidden}
+.dim-bar-fill{height:100%;border-radius:9px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:10px;color:#fff;font-weight:600}
+
+/* Radar Canvas */
+.radar-wrap{display:flex;justify-content:center;margin:20px 0}
+canvas.radar{max-width:400px;width:100%}
+
+/* History */
+.history-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.history-toolbar .btn-batch{font-size:12px;padding:4px 12px;border-radius:6px;background:var(--danger,#e74c3c);color:#fff;border:none;cursor:pointer;transition:var(--trans);opacity:0;pointer-events:none}
+.history-toolbar .btn-batch.visible{opacity:1;pointer-events:auto}
+.history-toolbar .btn-batch:hover{filter:brightness(0.9)}
+.history-toolbar .select-all-label{font-size:12px;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.history-toolbar .select-all-label input{accent-color:var(--pri)}
+.batch-count{font-size:12px;color:var(--pri);font-weight:600}
+.history-list{margin-top:0}
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:8px;background:var(--bg2);margin-bottom:8px;transition:var(--trans)}
+.hist-item:hover{background:var(--bg3)}
+.hist-item.selected{background:var(--pri-light,#e8f0fe);border:1.5px solid var(--pri)}
+.hist-check{margin-right:10px;accent-color:var(--pri);cursor:pointer;width:16px;height:16px;flex-shrink:0}
+.hist-info{flex:1}
+.hist-name{font-size:14px;font-weight:600}
+.hist-sub{font-size:12px;color:var(--text3)}
+.hist-actions{display:flex;gap:6px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;background:var(--text1);color:var(--bg1);font-size:14px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* AI Summary */
+.ai-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:10px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff;font-weight:600}
+.ai-summary-panel{margin-top:16px;padding:20px;border-radius:var(--radius);background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(6,182,212,.06));border:1.5px solid rgba(139,92,246,.2)}
+.ai-summary-panel h4{font-size:15px;font-weight:700;color:var(--pri);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ai-summary-panel .ai-overall{font-size:14px;color:var(--text1);line-height:1.7;margin-bottom:14px;padding:12px;background:var(--bg2);border-radius:8px}
+.ai-rec{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.ai-rec.strong_hire{background:rgba(16,185,129,.12);color:#059669}
+.ai-rec.hire{background:rgba(79,70,229,.1);color:var(--pri)}
+.ai-rec.hold{background:rgba(245,158,11,.12);color:#d97706}
+.ai-rec.no_hire{background:rgba(239,68,68,.1);color:var(--red)}
+.ai-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.ai-detail-box{padding:14px;border-radius:8px;font-size:13px}
+.ai-detail-box.ai-strengths{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15)}
+.ai-detail-box.ai-improvements{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15)}
+.ai-detail-box h5{font-size:13px;font-weight:600;margin-bottom:8px}
+.ai-detail-box li{margin-bottom:4px;line-height:1.5;color:var(--text2)}
+.ai-next-steps{margin-top:10px;padding:12px;border-radius:8px;background:var(--bg2);font-size:13px}
+.ai-next-steps h5{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--pri)}
+.ai-next-steps li{margin-bottom:3px;color:var(--text2)}
+.ai-dim-comments{margin-top:10px}
+.ai-dim-comments details{margin-bottom:4px}
+.ai-dim-comments summary{font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);padding:4px 0}
+.ai-dim-comments summary:hover{color:var(--pri)}
+.ai-dim-comments p{font-size:12px;color:var(--text3);padding:4px 0 4px 16px}
+.ai-import-section{margin-top:16px;padding:16px;border-radius:var(--radius);border:2px dashed rgba(139,92,246,.3);background:rgba(139,92,246,.04);text-align:center}
+.ai-import-section p{font-size:13px;color:var(--text3);margin-bottom:10px}
+
+/* Responsive */
+@media(max-width:640px){
+  .hero h1{font-size:26px}
+  .sr-grid{grid-template-columns:1fr}
+  .sc-meta{flex-direction:column}
+  .sc-meta input{width:100%}
+  .ai-detail-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    面试评分卡 Pro
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-sm btn-ghost" onclick="showPage('home')">🏠 首页</button>
+    <button class="btn btn-sm btn-ghost" onclick="showPage('scorecard')" id="btnSc">📋 评分表</button>
+    <button class="btn btn-sm btn-ghost" onclick="showPage('compare')">📊 对比</button>
+    <button id="aiStatusBtn" class="btn btn-sm" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;font-weight:600;gap:6px;animation:aiPulse 2s ease-in-out infinite;box-shadow:0 2px 8px rgba(245,158,11,.3)" onclick="showAiConfigPanel()">
+      <span id="aiDotIcon" style="width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;opacity:.8"></span>
+      <span id="aiDotLabel">⚙️ 配置 AI</span>
+    </button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌓</button>
+  </div>
+</div>
+
+<!-- ========== HOME PAGE ========== -->
+<div class="container">
+<div id="pageHome" class="page active">
+  <div class="hero">
+    <h1>🎯 AI 面试评分卡</h1>
+    <p>支持本地 Ollama 或云端 AI 模型，粘贴 JD 自动生成评分维度。面试后 AI 智能总结，多候选人横向对比。</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-pri" style="background:linear-gradient(135deg,#4f46e5,#06b6d4)" onclick="showJDModal()">🤖 AI 生成评分配置</button>
+      <button class="btn btn-out" onclick="showImportModal()">📥 导入 JSON 配置</button>
+      <button class="btn btn-out" onclick="showPage('compare')">📊 候选人对比</button>
+    </div>
+  </div>
+
+  <!-- Workflow -->
+  <div class="card">
+    <div class="section-title">🔄 使用流程</div>
+    <div class="workflow">
+      <div class="wf-step"><div class="step-num">1</div><h3>AI 生成评分配置</h3><p>点击按钮，粘贴 JD，AI 自动生成评分卡</p></div>
+      <div class="wf-step"><div class="step-num">2</div><h3>面试打分</h3><p>逐项打星评分，记录行为证据</p></div>
+      <div class="wf-step"><div class="step-num">3</div><h3>AI 智能总结</h3><p>一键生成 AI 面试评价与建议</p></div>
+      <div class="wf-step"><div class="step-num">4</div><h3>候选人对比</h3><p>多人横向对比，按岗位筛选排名</p></div>
+    </div>
+  </div>
+
+  <!-- My Saved Configs -->
+  <div class="card">
+    <div class="section-title" style="justify-content:space-between">
+      <span>⭐ 我的配置</span>
+      <span style="font-size:12px;color:var(--text3);font-weight:400" id="savedCount"></span>
+    </div>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">导入过的评分卡配置会自动保存在这里，下次直接点击使用。</p>
+    <div class="template-grid" id="savedGrid"></div>
+  </div>
+
+  <!-- Built-in Templates -->
+  <div class="card">
+    <div class="section-title">📦 内置模板（快速开始）</div>
+    <div class="template-grid" id="tplGrid"></div>
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <div class="section-title">📁 历史记录</div>
+    <div class="history-toolbar" id="historyToolbar" style="display:none">
+      <label class="select-all-label"><input type="checkbox" id="histSelectAll" onchange="toggleSelectAllRecords(this.checked)"><span id="histSelectAllLabel">全选</span></label>
+      <span class="batch-count" id="histBatchCount"></span>
+      <button class="btn btn-batch" id="histBatchDeleteBtn" onclick="batchDeleteRecords()">🗑 批量删除</button>
+    </div>
+    <div class="history-list" id="historyList"><p style="color:var(--text3);font-size:13px">暂无记录。评分完成后可在此查看历史。</p></div>
+  </div>
+
+
+</div>
+
+<!-- ========== SCORECARD PAGE ========== -->
+<div id="pageScorecard" class="page">
+  <div class="sc-header">
+    <div class="sc-info">
+      <h2 id="scTitle">面试评分表</h2>
+      <p id="scDesc"></p>
+    </div>
+    <div class="sc-meta">
+      <input type="text" id="candName" placeholder="候选人姓名" oninput="autoSave()">
+      <input type="date" id="candDate" oninput="autoSave()">
+      <input type="text" id="interviewer" placeholder="面试官" oninput="autoSave()">
+    </div>
+  </div>
+  <div id="dimensionsWrap"></div>
+
+  <!-- Summary -->
+  <div class="card" id="summaryCard" style="display:none">
+    <div class="section-title">📊 评分汇总</div>
+    <div class="score-summary" id="scoreSummary"></div>
+    <div class="sr-grid" id="srGrid"></div>
+    <div style="margin-top:12px">
+      <label style="font-size:13px;color:var(--text3)">综合评价</label>
+      <textarea id="overallComment" style="width:100%;min-height:80px;padding:10px;border:1.5px solid var(--bg3);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);margin-top:6px;resize:vertical" placeholder="请输入对候选人的综合评价..." oninput="autoSave()"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-pri" id="btnAiSummary" onclick="doAiSummary()" style="background:linear-gradient(135deg,#8b5cf6,#06b6d4)">🤖 AI 总结</button>
+      <button class="btn btn-pri" id="btnSaveRecord" onclick="doSaveRecord()">💾 保存记录</button>
+      <button class="btn btn-out" onclick="exportJSON()">📄 导出 JSON</button>
+      <button class="btn btn-out" onclick="exportCSV()">📊 导出 CSV</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ 打印</button>
+      <button class="btn btn-danger btn-sm" onclick="resetScorecard()" style="margin-left:auto">🗑️ 重置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== COMPARE PAGE ========== -->
+<div id="pageCompare" class="page">
+  <div class="card">
+    <div class="section-title">📊 候选人对比分析</div>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">从历史记录中选择候选人进行横向对比，支持按面试岗位筛选</p>
+    <div class="compare-filter">
+      <label>🔍 按岗位筛选：</label>
+      <select id="compareJobFilter" onchange="filterCompareByJob()">
+        <option value="">全部岗位</option>
+      </select>
+      <span class="compare-select-all" onclick="selectAllVisible()" style="margin-left:12px">全选当前</span>
+      <span class="compare-select-all" onclick="clearAllSelected()" style="margin-left:8px">清空选择</span>
+    </div>
+    <div id="compareGroupWrap"></div>
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-pri" onclick="doCompare()">开始对比</button>
+      <button class="btn btn-out" onclick="triggerFileImport()" style="border-color:#059669;color:#059669">📥 导入评分卡文件</button>
+      <input type="file" id="fileImportInput" accept=".json,.csv" style="display:none" onchange="handleFileImport(event)">
+    </div>
+  </div>
+  <div class="compare-result" id="compareResult"></div>
+</div>
+</div>
+
+<!-- JD AI Generate Modal -->
+<div class="modal-overlay" id="jdModal">
+  <div class="modal">
+    <h2 style="display:flex;align-items:center;gap:8px">🤖 AI 生成评分配置</h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">粘贴岗位 JD（职位描述），AI 将自动分析并生成专业评分卡配置</p>
+    <textarea id="jdInput" placeholder="请粘贴完整的岗位描述，包括职责和要求...&#10;&#10;例如：&#10;岗位名称：高级前端工程师&#10;职责：负责核心产品前端开发...&#10;要求：5年以上前端开发经验..." style="min-height:200px"></textarea>
+    <div id="jdStatus" style="font-size:13px;color:var(--pri);margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeJDModal()">取消</button>
+      <button class="btn btn-pri" id="btnJDGenerate" style="background:linear-gradient(135deg,#4f46e5,#06b6d4)" onclick="doJDGenerate()">🤖 生成评分配置</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>📥 导入 JSON 配置</h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">将 AI 生成的 JSON 配置粘贴到下方：</p>
+    <textarea id="importJSON" placeholder='{"title":"...","dimensions":[...]}'></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeImportModal()">取消</button>
+      <button class="btn btn-pri" onclick="doImport()">导入并开始</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- AI Config Panel -->
+<div class="modal-overlay" id="aiConfigPanel">
+  <div class="modal" style="max-width:500px">
+    <h2>🤖 AI 服务配置</h2>
+    <p style="font-size:13px;color:var(--text3);margin-bottom:12px">选择 AI 服务，输入 API Key / Token Plan Key，页面配置优先于 .env 和 Ollama。</p>
+    <div id="aiPresetChips" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:4px"></div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">API Key / Token Plan Key</label>
+      <input type="password" id="aiCfgKey" placeholder="输入 API Key" style="width:100%;padding:8px 12px;border:1.5px solid var(--bg3);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:14px">
+      <div id="aiCfgHint" style="font-size:12px;color:var(--text3);margin-top:4px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">API 地址</label>
+        <input type="text" id="aiCfgBaseUrl" placeholder="https://api.deepseek.com" style="width:100%;padding:8px 12px;border:1.5px solid var(--bg3);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">模型名称</label>
+        <input type="text" id="aiCfgModel" placeholder="deepseek-chat" style="width:100%;padding:8px 12px;border:1.5px solid var(--bg3);border-radius:8px;background:var(--bg2);color:var(--text1);font-size:13px">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAiConfigPanel()">取消</button>
+      <button class="btn btn-danger btn-sm" onclick="resetAiConfigPro()">清除配置</button>
+      <button class="btn btn-pri" id="btnSaveAiCfg" onclick="saveAiConfigPro()">验证并保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== I18N (INTERNATIONALIZATION) =====
+let _lang = 'zh'; // 'zh' or 'en'
+
+const I18N = {
+  zh: {
+    // Top bar
+    appTitle: '面试评分卡 Pro',
+    navHome: '🏠 首页',
+    navScorecard: '📋 评分表',
+    navCompare: '📊 对比',
+    themeToggle: '切换主题',
+    // Home hero
+    heroTitle: '🎯 AI 面试评分卡',
+    heroDesc: '支持本地 Ollama 或云端 AI 模型，粘贴 JD 自动生成评分维度。面试后 AI 智能总结，多候选人横向对比。',
+    btnImportJSON: '📥 导入 JSON 配置',
+    btnCompare: '📊 候选人对比',
+    // Workflow
+    workflowTitle: '🔄 使用流程',
+    step1Title: 'AI 生成评分配置', step1Desc: '点击按钮，粘贴 JD，AI 自动生成评分卡',
+    step2Title: '面试打分', step2Desc: '逐项打星评分，记录行为证据',
+    step3Title: 'AI 智能总结', step3Desc: '一键生成 AI 面试评价与建议',
+    step4Title: '候选人对比', step4Desc: '多人横向对比，按岗位筛选排名',
+    // Saved configs
+    savedTitle: '⭐ 我的配置',
+    savedDesc: '导入过的评分卡配置会自动保存在这里，下次直接点击使用。',
+    savedCount: '{n}个配置',
+    savedEmpty: '📭 暂无保存的配置',
+    savedEmptySub: '导入 JSON 配置后会自动保存在这里',
+    savedBadge: '已保存',
+    deleteConfirm: '确定删除此已保存的配置？',
+    configDeleted: '配置已删除',
+    configNotFound: '配置未找到',
+    configLoaded: '已加载配置：',
+    // Templates
+    tplTitle: '📦 内置模板（快速开始）',
+    tplMeta: '{d}维度 · {i}评估项',
+    tplLoaded: '已加载模板：',
+    // History
+    historyTitle: '📁 历史记录',
+    historyEmpty: '暂无记录。评分完成后可在此查看历史。',
+    historyEmptyShort: '暂无记录。',
+    btnView: '查看',
+    btnDelete: '删除',
+    deleteRecordConfirm: '确定删除该记录？',
+    deleted: '已删除',
+    selectAllRecords: '全选',
+    batchDelete: '🗑 批量删除',
+    batchDeleteConfirm: '确定删除选中的 {n} 条记录？此操作不可撤销。',
+    batchDeleted: '已批量删除 {n} 条记录',
+    batchSelected: '已选 {n} 条',
+    // Prompt
+    promptTitle: '💡 AI 提示词模板',
+    promptDesc: '复制以下提示词到 AI 对话中，粘贴 JD 即可生成配置：',
+    btnCopyPrompt: '📋 复制提示词',
+    promptCopied: '已复制提示词！',
+    // Import modal
+    importTitle: '📥 导入 JSON 配置',
+    importDesc: '将 AI 生成的 JSON 配置粘贴到下方：',
+    btnCancel: '取消',
+    btnImportStart: '导入并开始',
+    importEmpty: '请粘贴JSON配置',
+    importFail: 'JSON解析失败：',
+    importMissDims: '缺少dimensions',
+    importSuccess: '配置导入成功！已自动保存到"我的配置"',
+    // Scorecard
+    scDefaultTitle: '面试评分表',
+    phCandName: '候选人姓名',
+    phInterviewer: '面试官',
+    weight: '权重',
+    score: '分',
+    evidenceLabel: '📝 行为证据记录',
+    evidencePlaceholder: '记录该维度下的具体行为表现...',
+    // Summary
+    summaryTitle: '📊 评分汇总',
+    totalScore: '综合得分（满分5.0）',
+    scoreRate: '得分率',
+    recommendation: '建议结论',
+    levelStrong: '强烈推荐', levelRecommend: '推荐', levelPending: '待定', levelReject: '不推荐',
+    strengthsTitle: '✅ 突出优势',
+    risksTitle: '⚠️ 风险项',
+    noStrengths: '暂无突出项',
+    noRisks: '暂无风险项',
+    overallLabel: '综合评价',
+    overallPlaceholder: '请输入对候选人的综合评价...',
+    btnExportJSON: '📄 导出 JSON',
+    btnExportCSV: '📊 导出 CSV',
+    btnPrint: '🖨️ 打印',
+    btnReset: '🗑️ 重置',
+    resetConfirm: '确定重置所有评分？',
+    resetDone: '已重置',
+    saved: '已保存：',
+    nameMissing: '请先填写候选人姓名',
+    jsonExported: 'JSON已导出',
+    csvExported: 'CSV已导出',
+    csvDim: '维度', csvWeight: '权重', csvAvg: '平均分', csvWeighted: '加权得分',
+    csvDetail: '评估项明细', csvItem: '评估项', csvScore: '得分',
+    // Compare
+    compareTitle: '📊 候选人对比分析',
+    compareDesc: '从历史记录中选择候选人进行横向对比，支持按面试岗位筛选',
+    filterLabel: '🔍 按岗位筛选：',
+    filterAll: '全部岗位',
+    filterPeople: '人',
+    selectAll: '全选当前',
+    clearAll: '清空选择',
+    selectGroup: '全选该组',
+    btnCompareStart: '开始对比',
+    compareMin: '请至少选择2位候选人',
+    compareNoData: '暂无历史记录可供对比',
+    compareNoJob: '该岗位下暂无候选人记录',
+    rankTitle: '🏆 综合排名',
+    dimCompareTitle: '📊 各维度对比',
+    radarTitle: '🕸️ 雷达图对比',
+    crossJobWarn: '⚠️ 当前对比包含不同岗位的候选人（{jobs}），维度对比仅基于第一位候选人的评分维度。',
+    unknownJob: '未知岗位',
+    // File Import
+    btnFileImport: '📥 导入评分卡文件',
+    fileImportSuccess: '导入成功！已添加 {count} 条候选人记录',
+    fileImportEmpty: '文件内容为空或格式不正确',
+    fileImportFail: '文件解析失败：',
+    fileImportNoRecords: '未检测到有效的评分记录',
+    fileImportDuplicate: '跳过重复记录：{name}',
+    // AI Summary & Save
+    btnAiSummary: '🤖 AI 总结',
+    btnSave: '💾 保存记录',
+    aiAnalyzing: '🤖 AI 分析中...',
+    aiSummaryDone: '🤖 AI 总结已生成并自动保存！',
+    aiSummaryFail: 'AI 总结失败：',
+    needScoresFirst: '请先完成评分再进行 AI 总结',
+    // Compare AI
+    compareAnalyzing: '🤖 AI 正在综合分析候选人...',
+    compareAiTitle: '🤖 AI 综合对比分析',
+    compareAiFail: 'AI 对比分析失败：',
+    aiBadge: '🤖 AI',
+    aiOverallTitle: '🤖 AI 综合评价',
+    aiStrengthsTitle: '💪 核心优势',
+    aiImprovementsTitle: '📋 待改进项',
+    aiRecommendation: 'AI 建议',
+    aiNextSteps: '📌 后续行动建议',
+    aiDimComments: '📝 各维度 AI 点评',
+    aiRecStrong: '强烈推荐 ✅',
+    aiRecHire: '推荐录用 👍',
+    aiRecHold: '待定 ⏸️',
+    aiRecNoHire: '不推荐 ❌',
+    aiSummarySection: '🤖 AI 分析总结',
+  },
+  en: {
+    appTitle: 'Interview Scorecard Pro',
+    navHome: '🏠 Home',
+    navScorecard: '📋 Scorecard',
+    navCompare: '📊 Compare',
+    themeToggle: 'Toggle Theme',
+    heroTitle: '🎯 AI Interview Scorecard',
+    heroDesc: 'Supports local Ollama or cloud AI models. Paste a JD to auto-generate scoring criteria. AI summarizes after interviews, with side-by-side candidate comparison.',
+    btnAIGenerate: '🤖 AI Generate Config',
+    btnImportJSON: '📥 Import JSON Config',
+    btnCompare: '📊 Compare Candidates',
+    bannerTitle: 'First time? Configure your AI model',
+    bannerDesc: 'Set up a local Ollama or cloud API (MiniMax, OpenAI, etc.) to unlock AI-powered JD parsing, scoring dimensions, and interview summaries.',
+    bannerBtn: '⚙️ Configure AI Now',
+    aiNotConnected: '⚙️ Configure AI',
+    aiConnected: '✅ AI Connected',
+    workflowTitle: '🔄 Workflow',
+    step1Title: 'Configure AI', step1Desc: 'Set up local Ollama or cloud API model',
+    step2Title: 'Input JD', step2Desc: 'Paste job description, AI auto-generates scorecard',
+    step3Title: 'Score Interview', step3Desc: 'Rate each criterion, click AI for summary',
+    step4Title: 'Compare & Analyze', step4Desc: 'View candidate ranking by job position',
+    savedTitle: '⭐ My Configs',
+    savedDesc: 'Imported scorecard configs are auto-saved here. Click to reuse anytime.',
+    savedCount: '{n} configs',
+    savedEmpty: '📭 No saved configs yet',
+    savedEmptySub: 'Imported JSON configs will be auto-saved here',
+    savedBadge: 'Saved',
+    deleteConfirm: 'Delete this saved config?',
+    configDeleted: 'Config deleted',
+    configNotFound: 'Config not found',
+    configLoaded: 'Loaded config: ',
+    tplTitle: '📦 Built-in Templates (Quick Start)',
+    tplMeta: '{d} dims · {i} criteria',
+    tplLoaded: 'Loaded template: ',
+    historyTitle: '📁 History',
+    historyEmpty: 'No records yet. Completed scorecards will appear here.',
+    historyEmptyShort: 'No records.',
+    btnView: 'View',
+    btnDelete: 'Delete',
+    deleteRecordConfirm: 'Delete this record?',
+    deleted: 'Deleted',
+    selectAllRecords: 'Select All',
+    batchDelete: '🗑 Batch Delete',
+    batchDeleteConfirm: 'Delete {n} selected record(s)? This cannot be undone.',
+    batchDeleted: '{n} record(s) deleted',
+    batchSelected: '{n} selected',
+    promptTitle: '💡 AI Prompt Template',
+    promptDesc: 'Copy the prompt below into your AI chat and paste your JD to generate a config:',
+    btnCopyPrompt: '📋 Copy Prompt',
+    promptCopied: 'Prompt copied!',
+    importTitle: '📥 Import JSON Config',
+    importDesc: 'Paste the AI-generated JSON config below:',
+    btnCancel: 'Cancel',
+    btnImportStart: 'Import & Start',
+    importEmpty: 'Please paste a JSON config',
+    importFail: 'JSON parse error: ',
+    importMissDims: 'Missing dimensions',
+    importSuccess: 'Config imported! Auto-saved to "My Configs"',
+    scDefaultTitle: 'Interview Scorecard',
+    phCandName: 'Candidate Name',
+    phInterviewer: 'Interviewer',
+    weight: 'Weight',
+    score: 'pts',
+    evidenceLabel: '📝 Behavioral Evidence',
+    evidencePlaceholder: 'Record specific behavioral observations for this dimension...',
+    summaryTitle: '📊 Score Summary',
+    totalScore: 'Total Score (out of 5.0)',
+    scoreRate: 'Score Rate',
+    recommendation: 'Recommendation',
+    levelStrong: 'Strong Hire', levelRecommend: 'Hire', levelPending: 'On Hold', levelReject: 'No Hire',
+    strengthsTitle: '✅ Key Strengths',
+    risksTitle: '⚠️ Risk Areas',
+    noStrengths: 'No outstanding strengths',
+    noRisks: 'No risk areas',
+    overallLabel: 'Overall Comments',
+    overallPlaceholder: 'Enter your overall assessment of the candidate...',
+    btnExportJSON: '📄 Export JSON',
+    btnExportCSV: '📊 Export CSV',
+    btnPrint: '🖨️ Print',
+    btnReset: '🗑️ Reset',
+    resetConfirm: 'Reset all scores?',
+    resetDone: 'Reset complete',
+    saved: 'Saved: ',
+    nameMissing: 'Please enter the candidate name first',
+    jsonExported: 'JSON exported',
+    csvExported: 'CSV exported',
+    csvDim: 'Dimension', csvWeight: 'Weight', csvAvg: 'Average', csvWeighted: 'Weighted Score',
+    csvDetail: 'Criteria Detail', csvItem: 'Criterion', csvScore: 'Score',
+    compareTitle: '📊 Candidate Comparison',
+    compareDesc: 'Select candidates from history for side-by-side comparison, filterable by position',
+    filterLabel: '🔍 Filter by Position:',
+    filterAll: 'All Positions',
+    filterPeople: '',
+    selectAll: 'Select All',
+    clearAll: 'Clear All',
+    selectGroup: 'Select Group',
+    btnCompareStart: 'Compare',
+    compareMin: 'Please select at least 2 candidates',
+    compareNoData: 'No history records available for comparison',
+    compareNoJob: 'No candidate records for this position',
+    rankTitle: '🏆 Overall Ranking',
+    dimCompareTitle: '📊 Dimension Comparison',
+    radarTitle: '🕸️ Radar Chart',
+    crossJobWarn: '⚠️ Comparing candidates across different positions ({jobs}). Dimension comparison is based on the first candidate\'s scoring dimensions.',
+    unknownJob: 'Unknown Position',
+    // File Import
+    btnFileImport: '📥 Import Scorecard File',
+    fileImportSuccess: 'Import successful! Added {count} candidate records',
+    fileImportEmpty: 'File is empty or format is incorrect',
+    fileImportFail: 'File parse error: ',
+    fileImportNoRecords: 'No valid scoring records found',
+    fileImportDuplicate: 'Skipped duplicate: {name}',
+    // AI Summary & Save
+    btnAiSummary: '🤖 AI Summary',
+    btnSave: '💾 Save Record',
+    aiAnalyzing: '🤖 AI Analyzing...',
+    aiSummaryDone: '🤖 AI summary generated & auto-saved!',
+    aiSummaryFail: 'AI summary failed: ',
+    needScoresFirst: 'Please complete scoring before AI summary',
+    // Compare AI
+    compareAnalyzing: '🤖 AI analyzing candidates...',
+    compareAiTitle: '🤖 AI Comparative Analysis',
+    compareAiFail: 'AI comparison failed: ',
+    aiBadge: '🤖 AI',
+    aiOverallTitle: '🤖 AI Overall Assessment',
+    aiStrengthsTitle: '💪 Key Strengths',
+    aiImprovementsTitle: '📋 Areas for Improvement',
+    aiRecommendation: 'AI Recommendation',
+    aiNextSteps: '📌 Suggested Next Steps',
+    aiDimComments: '📝 AI Dimension Comments',
+    aiRecStrong: 'Strong Hire ✅',
+    aiRecHire: 'Hire 👍',
+    aiRecHold: 'On Hold ⏸️',
+    aiRecNoHire: 'No Hire ❌',
+    aiSummarySection: '🤖 AI Analysis Summary',
+  }
+};
+
+function t(key, vars){
+  let s = (I18N[_lang] && I18N[_lang][key]) || (I18N.zh[key]) || key;
+  if(vars){
+    Object.entries(vars).forEach(([k,v])=>{ s = s.replace('{'+k+'}', v); });
+  }
+  return s;
+}
+
+// Detect if text is primarily English
+function detectLang(cfg){
+  if(!cfg) return 'zh';
+  // Gather text samples from config
+  const samples = [cfg.title||'', cfg.description||''];
+  if(cfg.dimensions){
+    cfg.dimensions.forEach(d=>{
+      samples.push(d.name||'');
+      if(d.items) d.items.forEach(it=>samples.push(it.name||''));
+    });
+  }
+  const text = samples.join(' ');
+  if(!text.trim()) return 'zh';
+  // Count CJK characters vs Latin characters
+  const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g)||[]).length;
+  const latin = (text.match(/[a-zA-Z]/g)||[]).length;
+  // If Latin characters significantly outnumber CJK, treat as English
+  return (latin > cjk * 2 && latin > 10) ? 'en' : 'zh';
+}
+
+function setLang(lang){
+  _lang = lang;
+  document.documentElement.lang = lang==='en'?'en':'zh-CN';
+  document.title = t('appTitle');
+  refreshAllUIText();
+}
+
+function refreshAllUIText(){
+  // Top bar
+  const logoEl = document.querySelector('.topbar .logo');
+  if(logoEl){
+    const svg = logoEl.querySelector('svg');
+    logoEl.innerHTML = '';
+    if(svg) logoEl.appendChild(svg);
+    logoEl.appendChild(document.createTextNode(' '+t('appTitle')));
+  }
+  // Nav buttons
+  const navBtns = document.querySelectorAll('.topbar-actions .btn');
+  if(navBtns[0]) navBtns[0].textContent = t('navHome');
+  if(navBtns[1]) navBtns[1].textContent = t('navScorecard');
+  if(navBtns[2]) navBtns[2].textContent = t('navCompare');
+  const themeBtn = document.querySelector('.theme-toggle');
+  if(themeBtn) themeBtn.title = t('themeToggle');
+
+  // Home page hero
+  const heroH1 = document.querySelector('.hero h1');
+  if(heroH1) heroH1.textContent = t('heroTitle');
+  const heroP = document.querySelector('.hero p');
+  if(heroP) heroP.textContent = t('heroDesc');
+  const heroBtns = document.querySelectorAll('.hero .btn');
+  if(heroBtns[0]) heroBtns[0].textContent = t('btnAIGenerate');
+  if(heroBtns[1]) heroBtns[1].textContent = t('btnImportJSON');
+  if(heroBtns[2]) heroBtns[2].textContent = t('btnCompare');
+
+  // AI Status Button in topbar
+  const aiDotLabel = document.getElementById('aiDotLabel');
+  if(aiDotLabel){
+    const isConnected = document.getElementById('aiStatusBtn')?.classList.contains('ai-connected');
+    aiDotLabel.textContent = isConnected ? t('aiConnected') : t('aiNotConnected');
+  }
+
+  // AI Setup Banner
+  const bannerTitle = document.getElementById('bannerTitle');
+  if(bannerTitle) bannerTitle.textContent = t('bannerTitle');
+  const bannerDesc = document.getElementById('bannerDesc');
+  if(bannerDesc) bannerDesc.textContent = t('bannerDesc');
+  const bannerBtn = document.querySelector('#aiSetupBanner .btn');
+  if(bannerBtn) bannerBtn.textContent = t('bannerBtn');
+
+  // Workflow
+  const wfTitle = document.querySelectorAll('#pageHome .section-title');
+  if(wfTitle[0]) wfTitle[0].textContent = t('workflowTitle');
+  const steps = document.querySelectorAll('.wf-step');
+  const stepKeys = ['step1','step2','step3','step4'];
+  steps.forEach((s,i)=>{
+    const h3=s.querySelector('h3');
+    const p=s.querySelector('p');
+    if(h3 && stepKeys[i]) h3.textContent=t(stepKeys[i]+'Title');
+    if(p && stepKeys[i]) p.textContent=t(stepKeys[i]+'Desc');
+  });
+
+  // Saved configs section
+  if(wfTitle[1]){
+    const span = wfTitle[1].querySelector('span:first-child') || wfTitle[1];
+    span.textContent = t('savedTitle');
+  }
+  const savedDescP = document.querySelector('#pageHome .card:nth-child(3) > p');
+  if(savedDescP) savedDescP.textContent = t('savedDesc');
+
+  // Templates
+  if(wfTitle[2]) wfTitle[2].textContent = t('tplTitle');
+
+  // History
+  if(wfTitle[3]) wfTitle[3].textContent = t('historyTitle');
+
+  // Scorecard placeholders
+  const candName = document.getElementById('candName');
+  if(candName) candName.placeholder = t('phCandName');
+  const interviewer = document.getElementById('interviewer');
+  if(interviewer) interviewer.placeholder = t('phInterviewer');
+
+  // Summary buttons & labels
+  const overallLabel = document.querySelector('#summaryCard > div:nth-child(3) > label');
+  if(overallLabel) overallLabel.textContent = t('overallLabel');
+  const overallTA = document.getElementById('overallComment');
+  if(overallTA) overallTA.placeholder = t('overallPlaceholder');
+  const summaryBtns = document.querySelectorAll('#summaryCard .btn');
+  const btnKeys = ['btnAiSummary','btnSave','btnExportJSON','btnExportCSV','btnPrint','btnReset'];
+  // Update by ID for the first two, rest by order from summaryBtns
+  const aiBtn=document.getElementById('btnAiSummary');
+  if(aiBtn) aiBtn.textContent=t('btnAiSummary');
+  const saveBtn=document.getElementById('btnSaveRecord');
+  if(saveBtn) saveBtn.textContent=t('btnSave');
+
+  // Import modal
+  const modalH2 = document.querySelector('#importModal h2');
+  if(modalH2) modalH2.textContent = t('importTitle');
+  const modalP = document.querySelector('#importModal p');
+  if(modalP) modalP.textContent = t('importDesc');
+  const modalBtns = document.querySelectorAll('#importModal .btn');
+  if(modalBtns[0]) modalBtns[0].textContent = t('btnCancel');
+  if(modalBtns[1]) modalBtns[1].textContent = t('btnImportStart');
+
+  // Compare page
+  const compareSecTitle = document.querySelector('#pageCompare .section-title');
+  if(compareSecTitle) compareSecTitle.textContent = t('compareTitle');
+  const compareDescP = document.querySelector('#pageCompare .card > p');
+  if(compareDescP) compareDescP.textContent = t('compareDesc');
+  const filterLbl = document.querySelector('.compare-filter label');
+  if(filterLbl) filterLbl.textContent = t('filterLabel');
+  const selectAllBtns = document.querySelectorAll('.compare-filter .compare-select-all');
+  if(selectAllBtns[0]) selectAllBtns[0].textContent = t('selectAll');
+  if(selectAllBtns[1]) selectAllBtns[1].textContent = t('clearAll');
+  const compareBtn = document.querySelector('#pageCompare .btn-pri');
+  if(compareBtn) compareBtn.textContent = t('btnCompareStart');
+  // File Import button
+  const fileImportBtn = document.querySelector('#pageCompare .btn-out');
+  if(fileImportBtn) fileImportBtn.innerHTML = t('btnFileImport');
+
+  // Refresh rendered sections
+  renderSavedConfigs();
+  renderHistory();
+  renderTemplates();
+  if(currentConfig){
+    renderDimensions();
+    // Restore scores
+    Object.entries(scores).forEach(([k,v])=>{
+      const [di,ii]=k.split('_');
+      renderStarState(parseInt(di),parseInt(ii));
+      const sv=document.getElementById('sv_'+di+'_'+ii);
+      if(sv) sv.textContent=v;
+    });
+    Object.entries(evidences).forEach(([di,txt])=>{
+      const ta=document.querySelectorAll('.dimension')[parseInt(di)]?.querySelector('.evidence-box textarea');
+      if(ta)ta.value=txt;
+    });
+    currentConfig.dimensions.forEach((_,di)=>updateDimScore(di));
+    updateSummary();
+  }
+}
+
+// ===== BUILT-IN TEMPLATES =====
+const TEMPLATES = {
+  frontend: {
+    title:"前端工程师 面试评分卡", description:"Web前端开发岗位评估",
+    icon:"⚛️", color:"#3b82f6",
+    dimensions:[
+      {name:"前端基础",weight:25,items:[
+        {name:"HTML/CSS",guide:"语义化、布局、响应式、CSS3动画"},
+        {name:"JavaScript",guide:"ES6+、原型链、异步、闭包"},
+        {name:"TypeScript",guide:"类型系统、泛型、工具类型"},
+        {name:"浏览器原理",guide:"渲染流程、事件循环、存储"}
+      ]},
+      {name:"框架与工程",weight:25,items:[
+        {name:"主流框架",guide:"React/Vue原理、生命周期、状态管理"},
+        {name:"工程化",guide:"Webpack/Vite、CI/CD、模块化"},
+        {name:"性能优化",guide:"加载优化、渲染优化、监控体系"},
+        {name:"跨端方案",guide:"SSR、小程序、RN/Flutter了解程度"}
+      ]},
+      {name:"项目经验",weight:20,items:[
+        {name:"项目复杂度",guide:"项目规模、技术挑战、架构设计"},
+        {name:"问题解决",guide:"遇到的难题及解决思路"},
+        {name:"业务理解",guide:"对业务场景的理解深度"}
+      ]},
+      {name:"综合能力",weight:15,items:[
+        {name:"系统设计",guide:"组件设计、状态管理、API设计"},
+        {name:"编码能力",guide:"代码质量、命名规范、算法基础"},
+        {name:"学习能力",guide:"技术广度、新技术跟进"}
+      ]},
+      {name:"软技能",weight:15,items:[
+        {name:"沟通表达",guide:"思路清晰、逻辑性强、善于总结"},
+        {name:"团队协作",guide:"Code Review、文档、知识分享"},
+        {name:"文化匹配",guide:"价值观、工作态度、职业规划"}
+      ]}
+    ]
+  },
+  backend: {
+    title:"后端工程师 面试评分卡", description:"服务端开发岗位评估",
+    icon:"⚙️", color:"#10b981",
+    dimensions:[
+      {name:"编程基础",weight:25,items:[
+        {name:"语言掌握",guide:"主语言深度(Java/Go/Python)、多语言能力"},
+        {name:"数据结构与算法",guide:"常用数据结构、排序搜索、复杂度分析"},
+        {name:"设计模式",guide:"常用模式应用、SOLID原则"},
+        {name:"并发编程",guide:"线程安全、锁机制、并发框架"}
+      ]},
+      {name:"系统设计",weight:25,items:[
+        {name:"架构设计",guide:"微服务、分布式、高可用设计"},
+        {name:"数据库",guide:"SQL优化、索引设计、分库分表、NoSQL"},
+        {name:"中间件",guide:"消息队列、缓存、搜索引擎"},
+        {name:"DevOps",guide:"容器化、K8s、CI/CD、监控"}
+      ]},
+      {name:"项目经验",weight:20,items:[
+        {name:"项目规模",guide:"QPS、数据量、团队规模"},
+        {name:"技术方案",guide:"方案设计合理性、trade-off分析"},
+        {name:"问题排查",guide:"线上问题定位、性能调优经验"}
+      ]},
+      {name:"综合素质",weight:15,items:[
+        {name:"技术视野",guide:"新技术关注、开源贡献"},
+        {name:"文档能力",guide:"技术文档、方案评审"},
+        {name:"逻辑思维",guide:"问题分析、抽象建模"}
+      ]},
+      {name:"软技能",weight:15,items:[
+        {name:"沟通协作",guide:"跨团队沟通、需求对齐"},
+        {name:"责任心",guide:"线上意识、code review态度"},
+        {name:"成长潜力",guide:"学习规划、职业发展"}
+      ]}
+    ]
+  },
+  pm: {
+    title:"产品经理 面试评分卡", description:"产品岗位综合评估",
+    icon:"📱", color:"#f59e0b",
+    dimensions:[
+      {name:"产品思维",weight:25,items:[
+        {name:"需求分析",guide:"用户洞察、需求拆解、优先级判断"},
+        {name:"产品设计",guide:"功能设计、交互逻辑、信息架构"},
+        {name:"数据驱动",guide:"数据指标、AB测试、漏斗分析"},
+        {name:"商业意识",guide:"商业模式、盈利策略、竞品分析"}
+      ]},
+      {name:"执行力",weight:20,items:[
+        {name:"项目推动",guide:"跨团队协调、进度把控、风险管理"},
+        {name:"文档能力",guide:"PRD质量、需求文档清晰度"},
+        {name:"结果导向",guide:"目标拆解、OKR制定"}
+      ]},
+      {name:"行业认知",weight:20,items:[
+        {name:"领域知识",guide:"行业趋势、竞品深度分析"},
+        {name:"用户理解",guide:"用户画像、场景分析"},
+        {name:"技术理解",guide:"技术可行性判断、与研发沟通"}
+      ]},
+      {name:"思维能力",weight:20,items:[
+        {name:"逻辑思维",guide:"结构化思考、问题拆解"},
+        {name:"创新能力",guide:"创意方案、差异化思路"},
+        {name:"战略思维",guide:"长期规划、全局视角"}
+      ]},
+      {name:"软技能",weight:15,items:[
+        {name:"沟通影响",guide:"表达清晰、说服力、向上管理"},
+        {name:"团队协作",guide:"跨职能合作、冲突处理"},
+        {name:"文化匹配",guide:"价值观、抗压、自驱力"}
+      ]}
+    ]
+  },
+  data: {
+    title:"数据分析师 面试评分卡", description:"数据分析岗位评估",
+    icon:"📊", color:"#8b5cf6",
+    dimensions:[
+      {name:"数据技能",weight:25,items:[
+        {name:"SQL能力",guide:"复杂查询、窗口函数、性能优化"},
+        {name:"Python/R",guide:"数据处理(Pandas)、可视化、统计库"},
+        {name:"统计基础",guide:"假设检验、回归、概率分布"},
+        {name:"可视化",guide:"图表选择、仪表盘设计、工具使用"}
+      ]},
+      {name:"分析能力",weight:25,items:[
+        {name:"业务分析",guide:"指标体系、归因分析、业务洞察"},
+        {name:"实验设计",guide:"AB实验、样本量估算、因果推断"},
+        {name:"数据建模",guide:"预测模型、分类聚类、特征工程"}
+      ]},
+      {name:"项目经验",weight:20,items:[
+        {name:"分析项目",guide:"项目复杂度、数据规模、业务影响"},
+        {name:"数据治理",guide:"数据质量、ETL、数据仓库"},
+        {name:"落地效果",guide:"分析结论的业务推动效果"}
+      ]},
+      {name:"思维能力",weight:15,items:[
+        {name:"逻辑推理",guide:"问题拆解、假设验证、逻辑自洽"},
+        {name:"商业敏感",guide:"业务理解、KPI意识"},
+        {name:"讲故事",guide:"数据叙事、报告表达"}
+      ]},
+      {name:"软技能",weight:15,items:[
+        {name:"沟通能力",guide:"非技术受众沟通、汇报能力"},
+        {name:"主动性",guide:"主动发现问题、自驱探索"},
+        {name:"协作",guide:"跨部门合作、需求理解"}
+      ]}
+    ]
+  }
+};
+
+// ===== STATE =====
+let currentConfig = null;
+let scores = {};      // {dimIdx_itemIdx: value}
+let evidences = {};   // {dimIdx: text}
+let history = JSON.parse(localStorage.getItem('isc_history')||'[]');
+let savedConfigs = JSON.parse(localStorage.getItem('isc_saved_configs')||'[]');
+
+// ===== UTILS =====
+function escHtml(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):'';}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById('page'+id.charAt(0).toUpperCase()+id.slice(1));
+  if(el)el.classList.add('active');
+  if(id==='compare')renderCompareSelect();
+  if(id==='home'){
+    // Auto-switch back to Chinese when returning to home (since home content is in Chinese)
+    if(_lang!=='zh') setLang('zh');
+    renderSavedConfigs();renderHistory();
+  }
+}
+function toggleTheme(){
+  const d=document.documentElement;
+  const t=d.getAttribute('data-theme')==='dark'?'':'dark';
+  d.setAttribute('data-theme',t);
+  localStorage.setItem('isc_theme',t);
+}
+function showImportModal(){document.getElementById('importModal').classList.add('show');}
+function closeImportModal(){document.getElementById('importModal').classList.remove('show');}
+
+
+// ===== TEMPLATES =====
+function renderTemplates(){
+  const g=document.getElementById('tplGrid');
+  g.innerHTML=Object.entries(TEMPLATES).map(([k,tpl])=>{
+    const dimCnt = tpl.dimensions.length;
+    const itemCnt = tpl.dimensions.reduce((a,d)=>a+d.items.length,0);
+    return `
+    <div class="tpl-card" onclick="loadTemplate('${k}')">
+      <div class="tpl-icon">${tpl.icon}</div>
+      <h4>${tpl.title.replace(' 面试评分卡','')}</h4>
+      <p>${tpl.description}</p>
+      <p style="margin-top:6px;font-size:11px;color:var(--pri)">${t('tplMeta',{d:dimCnt,i:itemCnt})}</p>
+    </div>`;
+  }).join('');
+}
+function loadTemplate(k){
+  applyConfig(TEMPLATES[k]);
+  showPage('scorecard');
+  toast(t('tplLoaded')+TEMPLATES[k].title);
+}
+
+// ===== IMPORT =====
+function doImport(){
+  const raw=document.getElementById('importJSON').value.trim();
+  if(!raw){toast(t('importEmpty'));return;}
+  try{
+    const cfg=JSON.parse(raw);
+    if(!cfg.dimensions||!cfg.dimensions.length)throw new Error(t('importMissDims'));
+    // Detect language from config content
+    const lang = detectLang(cfg);
+    setLang(lang);
+    // Auto-save config to library
+    saveConfigToLibrary(cfg);
+    applyConfig(cfg);
+    closeImportModal();
+    showPage('scorecard');
+    toast(t('importSuccess'));
+  }catch(e){toast(t('importFail')+e.message);}
+}
+
+// ===== SAVED CONFIGS MANAGEMENT =====
+function saveConfigToLibrary(cfg){
+  // Check if config with same title already exists
+  const existIdx = savedConfigs.findIndex(c=>c.title===cfg.title);
+  const entry = {
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    title: cfg.title || '未命名配置',
+    description: cfg.description || '',
+    dimensions: cfg.dimensions,
+    savedAt: new Date().toISOString(),
+    dimCount: cfg.dimensions.length,
+    itemCount: cfg.dimensions.reduce((a,d)=>a+d.items.length,0)
+  };
+  if(existIdx>=0){
+    // Update existing
+    entry.id = savedConfigs[existIdx].id;
+    savedConfigs[existIdx] = entry;
+  } else {
+    savedConfigs.unshift(entry);
+  }
+  if(savedConfigs.length>20) savedConfigs = savedConfigs.slice(0,20);
+  localStorage.setItem('isc_saved_configs', JSON.stringify(savedConfigs));
+  renderSavedConfigs();
+}
+
+function renderSavedConfigs(){
+  const grid = document.getElementById('savedGrid');
+  const countEl = document.getElementById('savedCount');
+  if(!grid) return;
+  if(countEl) countEl.textContent = savedConfigs.length ? t('savedCount',{n:savedConfigs.length}) : '';
+  if(!savedConfigs.length){
+    grid.innerHTML = `<div class="empty-saved">${t('savedEmpty')}<br><span style="font-size:12px;margin-top:4px;display:inline-block">${t('savedEmptySub')}</span></div>`;
+    return;
+  }
+  grid.innerHTML = savedConfigs.map((c,i)=>{
+    const dateStr = c.savedAt ? new Date(c.savedAt).toLocaleDateString(_lang==='en'?'en-US':'zh-CN') : '';
+    const dimCnt = c.dimCount||c.dimensions.length;
+    const itemCnt = c.itemCount||c.dimensions.reduce((a,d)=>a+d.items.length,0);
+    return `
+    <div class="tpl-card saved-card" onclick="loadSavedConfig('${c.id}')">
+      <button class="tpl-delete" onclick="event.stopPropagation();deleteSavedConfig('${c.id}')" title="${t('btnDelete')}">×</button>
+      <div class="saved-badge">${t('savedBadge')}</div>
+      <h4>${escHtml(c.title.replace(' 面试评分卡',''))}</h4>
+      <p>${escHtml(c.description?c.description.slice(0,40)+(c.description.length>40?'...':''):'')}</p>
+      <p style="margin-top:6px;font-size:11px;color:var(--pri)">${t('tplMeta',{d:dimCnt,i:itemCnt})}</p>
+      <p style="margin-top:4px;font-size:10px;color:var(--text3)">${dateStr}</p>
+    </div>`;
+  }).join('');
+}
+
+function loadSavedConfig(id){
+  const cfg = savedConfigs.find(c=>c.id===id);
+  if(!cfg) { toast(t('configNotFound')); return; }
+  applyConfig(cfg);
+  showPage('scorecard');
+  toast(t('configLoaded')+cfg.title);
+}
+
+function deleteSavedConfig(id){
+  if(!confirm(t('deleteConfirm'))) return;
+  savedConfigs = savedConfigs.filter(c=>c.id!==id);
+  localStorage.setItem('isc_saved_configs', JSON.stringify(savedConfigs));
+  renderSavedConfigs();
+  toast(t('configDeleted'));
+}
+
+// ===== APPLY CONFIG =====
+function applyConfig(cfg){
+  currentConfig=cfg;
+  scores={};
+  evidences={};
+  // Auto-detect language if not already set by doImport
+  const lang = detectLang(cfg);
+  if(lang !== _lang) setLang(lang);
+  document.getElementById('scTitle').textContent=cfg.title||t('scDefaultTitle');
+  document.getElementById('scDesc').textContent=cfg.description||'';
+  document.getElementById('candName').value='';
+  document.getElementById('candDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('interviewer').value='';
+  document.getElementById('overallComment').value='';
+  // Clear AI summary from previous candidate
+  clearAiSummaryDisplay();
+  renderDimensions();
+  updateSummary();
+}
+
+// ===== RENDER DIMENSIONS =====
+function starSVG(dimIdx,itemIdx,starIdx){
+  return `<svg viewBox="0 0 24 24" data-d="${dimIdx}" data-i="${itemIdx}" data-s="${starIdx}"
+    onmouseenter="previewStars(${dimIdx},${itemIdx},${starIdx})"
+    onmouseleave="renderStarState(${dimIdx},${itemIdx})"
+    onclick="setStar(${dimIdx},${itemIdx},${starIdx})">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
+  </svg>`;
+}
+
+function renderDimensions(){
+  const wrap=document.getElementById('dimensionsWrap');
+  wrap.innerHTML=currentConfig.dimensions.map((dim,di)=>{
+    const itemsHTML=dim.items.map((it,ii)=>{
+      const starsHTML=Array.from({length:5},(_,si)=>starSVG(di,ii,si+1)).join('');
+      return `<div class="eval-item">
+        <span class="item-label">${escHtml(it.name)}${it.guide?`<span class="item-guide">（${escHtml(it.guide.slice(0,40))}${it.guide.length>40?'...':''}）</span>`:''}</span>
+        <div class="stars" id="stars_${di}_${ii}">${starsHTML}</div>
+        <span class="star-val" id="sv_${di}_${ii}">0</span>
+      </div>`;
+    }).join('');
+    return `<div class="card dimension">
+      <div class="dim-header">
+        <h3>${escHtml(dim.name)}（${t('weight')}${dim.weight}%）</h3>
+        <span class="dim-score" id="ds_${di}">0.0 ${t('score')}</span>
+      </div>
+      ${itemsHTML}
+      <div class="evidence-box">
+        <label>${t('evidenceLabel')}</label>
+        <textarea placeholder="${t('evidencePlaceholder')}" oninput="evidences[${di}]=this.value;autoSave()"></textarea>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== STAR RATING =====
+function setStar(di,ii,val){
+  const key=di+'_'+ii;
+  scores[key]=(scores[key]===val)?val-1:val;  // click same to decrease
+  if(scores[key]<0)scores[key]=0;
+  renderStarState(di,ii);
+  document.getElementById('sv_'+di+'_'+ii).textContent=scores[key]||0;
+  updateDimScore(di);
+  updateSummary();
+  autoSave();
+}
+function previewStars(di,ii,val){
+  const container=document.getElementById('stars_'+di+'_'+ii);
+  if(!container)return;
+  container.querySelectorAll('svg').forEach(s=>{
+    const si=parseInt(s.dataset.s);
+    s.classList.toggle('preview',si<=val);
+    s.classList.remove('active');
+  });
+}
+function renderStarState(di,ii){
+  const key=di+'_'+ii;
+  const val=scores[key]||0;
+  const container=document.getElementById('stars_'+di+'_'+ii);
+  if(!container)return;
+  container.querySelectorAll('svg').forEach(s=>{
+    const si=parseInt(s.dataset.s);
+    s.classList.remove('preview');
+    s.classList.toggle('active',si<=val);
+  });
+}
+
+// ===== SCORING =====
+function updateDimScore(di){
+  if(!currentConfig)return;
+  const dim=currentConfig.dimensions[di];
+  let sum=0,cnt=0;
+  dim.items.forEach((_,ii)=>{
+    const v=scores[di+'_'+ii]||0;
+    sum+=v;cnt++;
+  });
+  const avg=cnt?sum/cnt:0;
+  const el=document.getElementById('ds_'+di);
+  if(el)el.textContent=avg.toFixed(1)+' '+t('score');
+}
+
+function calcTotalScore(){
+  if(!currentConfig)return{total:0,dimScores:[],maxScore:0};
+  let total=0,dimScores=[];
+  currentConfig.dimensions.forEach((dim,di)=>{
+    let sum=0,cnt=0;
+    dim.items.forEach((_,ii)=>{sum+=scores[di+'_'+ii]||0;cnt++;});
+    const avg=cnt?sum/cnt:0;
+    const weighted=avg*(dim.weight/100);
+    dimScores.push({name:dim.name,avg,weighted,weight:dim.weight});
+    total+=weighted;
+  });
+  const maxScore=5;
+  return{total,dimScores,maxScore};
+}
+
+function updateSummary(){
+  if(!currentConfig)return;
+  const {total,dimScores,maxScore}=calcTotalScore();
+  const pct=(total/maxScore*100).toFixed(0);
+  const cls=pct>=80?'high':pct>=60?'mid':'low';
+  const level=pct>=90?t('levelStrong'):pct>=75?t('levelRecommend'):pct>=60?t('levelPending'):t('levelReject');
+
+  const summaryEl=document.getElementById('scoreSummary');
+  summaryEl.innerHTML=`
+    <div class="score-card"><div class="sc-val ${cls}">${total.toFixed(2)}</div><div class="sc-label">${t('totalScore')}</div></div>
+    <div class="score-card"><div class="sc-val ${cls}">${pct}%</div><div class="sc-label">${t('scoreRate')}</div></div>
+    <div class="score-card"><div class="sc-val ${cls}">${level}</div><div class="sc-label">${t('recommendation')}</div></div>
+  `;
+
+  // Strengths & Risks
+  const strengths=dimScores.filter(d=>d.avg>=4).map(d=>d.name+'（'+d.avg.toFixed(1)+(_lang==='en'?' pts':'分')+'）');
+  const risks=dimScores.filter(d=>d.avg<3).map(d=>d.name+'（'+d.avg.toFixed(1)+(_lang==='en'?' pts':'分')+'）');
+  document.getElementById('srGrid').innerHTML=`
+    <div class="sr-box strengths"><h4>${t('strengthsTitle')}</h4><ul>${strengths.length?strengths.map(s=>'<li>'+s+'</li>').join(''):'<li style="color:var(--text3)">'+t('noStrengths')+'</li>'}</ul></div>
+    <div class="sr-box risks"><h4>${t('risksTitle')}</h4><ul>${risks.length?risks.map(s=>'<li>'+s+'</li>').join(''):'<li style="color:var(--text3)">'+t('noRisks')+'</li>'}</ul></div>
+  `;
+
+  document.getElementById('summaryCard').style.display=Object.keys(scores).length?'block':'none';
+}
+
+// ===== HISTORY =====
+
+let _selectedRecordIds=new Set();
+
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  const toolbar=document.getElementById('historyToolbar');
+  if(!history.length){
+    el.innerHTML='<p style="color:var(--text3);font-size:13px">'+t('historyEmptyShort')+'</p>';
+    toolbar.style.display='none';
+    _selectedRecordIds.clear();
+    return;
+  }
+  toolbar.style.display='flex';
+  // Remove stale selections
+  const validIds=new Set(history.map(h=>h.id));
+  _selectedRecordIds.forEach(id=>{if(!validIds.has(id))_selectedRecordIds.delete(id);});
+  el.innerHTML=history.map(h=>{
+    const aiBadge=h.aiSummary?`<span class="ai-badge">${t('aiBadge')}</span>`:'';
+    const checked=_selectedRecordIds.has(h.id)?'checked':'';
+    const selClass=_selectedRecordIds.has(h.id)?' selected':'';
+    return `
+    <div class="hist-item${selClass}">
+      <input type="checkbox" class="hist-check" data-id="${h.id}" ${checked} onchange="toggleRecordSelect('${h.id}',this.checked)">
+      <div class="hist-info">
+        <div class="hist-name">${escHtml(h.name)} ${aiBadge}</div>
+        <div class="hist-sub">${escHtml(h.configTitle)} · ${h.date||''} · ${h.total.toFixed(2)}${_lang==='en'?' pts':'分'}</div>
+      </div>
+      <div class="hist-actions">
+        <button class="btn btn-sm btn-ghost" onclick="viewRecord('${h.id}')">${t('btnView')}</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteRecord('${h.id}')">${t('btnDelete')}</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateBatchUI();
+}
+
+function toggleRecordSelect(id,checked){
+  if(checked)_selectedRecordIds.add(id);
+  else _selectedRecordIds.delete(id);
+  // Update visual
+  document.querySelectorAll('.hist-check').forEach(cb=>{
+    cb.closest('.hist-item').classList.toggle('selected',cb.checked);
+  });
+  updateBatchUI();
+}
+
+function toggleSelectAllRecords(checked){
+  if(checked) history.forEach(h=>_selectedRecordIds.add(h.id));
+  else _selectedRecordIds.clear();
+  document.querySelectorAll('.hist-check').forEach(cb=>{
+    cb.checked=checked;
+    cb.closest('.hist-item').classList.toggle('selected',checked);
+  });
+  updateBatchUI();
+}
+
+function updateBatchUI(){
+  const n=_selectedRecordIds.size;
+  const countEl=document.getElementById('histBatchCount');
+  const btn=document.getElementById('histBatchDeleteBtn');
+  const selAll=document.getElementById('histSelectAll');
+  countEl.textContent=n?t('batchSelected').replace('{n}',n):'';
+  btn.classList.toggle('visible',n>0);
+  btn.textContent=t('batchDelete');
+  selAll.checked=history.length>0&&n===history.length;
+  // Update label text
+  const label=document.getElementById('histSelectAllLabel');
+  if(label)label.textContent=t('selectAllRecords');
+}
+
+function batchDeleteRecords(){
+  const n=_selectedRecordIds.size;
+  if(!n)return;
+  if(!confirm(t('batchDeleteConfirm').replace('{n}',n)))return;
+  const idsToDelete=new Set(_selectedRecordIds);
+  history=history.filter(h=>!idsToDelete.has(h.id));
+  localStorage.setItem('isc_history',JSON.stringify(history));
+  _selectedRecordIds.clear();
+  renderHistory();
+  toast(t('batchDeleted').replace('{n}',n));
+}
+
+function viewRecord(id){
+  const r=history.find(h=>h.id===id);
+  if(!r)return;
+  // Restore language from record or detect from config
+  const lang = r.lang || detectLang(r.config);
+  if(lang !== _lang) setLang(lang);
+  currentConfig=r.config;
+  scores={...r.scores};
+  evidences={...r.evidences};
+  document.getElementById('scTitle').textContent=r.config.title;
+  document.getElementById('scDesc').textContent=r.config.description||'';
+  document.getElementById('candName').value=r.name;
+  document.getElementById('candDate').value=r.date||'';
+  document.getElementById('interviewer').value=r.interviewer||'';
+  document.getElementById('overallComment').value=r.comment||'';
+  renderDimensions();
+  // Restore stars
+  Object.entries(scores).forEach(([k,v])=>{
+    const [di,ii]=k.split('_');
+    renderStarState(parseInt(di),parseInt(ii));
+    const sv=document.getElementById('sv_'+di+'_'+ii);
+    if(sv)sv.textContent=v;
+  });
+  // Restore evidences
+  Object.entries(evidences).forEach(([di,txt])=>{
+    const ta=document.querySelectorAll('.dimension')[parseInt(di)]?.querySelector('.evidence-box textarea');
+    if(ta)ta.value=txt;
+  });
+  currentConfig.dimensions.forEach((_,di)=>updateDimScore(di));
+  updateSummary();
+  // Show AI summary if this record has one, otherwise clear it
+  if(r.aiSummary){
+    showAiSummaryResult(r.aiSummary, r.name);
+  } else {
+    clearAiSummaryDisplay();
+  }
+  showPage('scorecard');
+}
+
+function deleteRecord(id){
+  if(!confirm(t('deleteRecordConfirm')))return;
+  history=history.filter(h=>h.id!==id);
+  _selectedRecordIds.delete(id);
+  localStorage.setItem('isc_history',JSON.stringify(history));
+  renderHistory();
+  toast(t('deleted'));
+}
+
+// ===== AUTO-SAVE =====
+let _autoSaveTimer;
+function autoSave(){
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer=setTimeout(()=>{
+    localStorage.setItem('isc_draft',JSON.stringify({config:currentConfig,scores,evidences,
+      name:document.getElementById('candName')?.value,
+      date:document.getElementById('candDate')?.value,
+      interviewer:document.getElementById('interviewer')?.value,
+      comment:document.getElementById('overallComment')?.value
+    }));
+  },800);
+}
+
+// ===== EXPORT =====
+function exportJSON(){
+  if(!currentConfig)return;
+  const {total,dimScores}=calcTotalScore();
+  const data={
+    title:currentConfig.title,
+    candidate:document.getElementById('candName').value,
+    date:document.getElementById('candDate').value,
+    interviewer:document.getElementById('interviewer').value,
+    total, dimScores, scores, evidences,
+    comment:document.getElementById('overallComment').value,
+    exportedAt:new Date().toISOString()
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(_lang==='en'?'score_':'评分_')+`${data.candidate||'unnamed'}_${data.date||'today'}.json`;
+  a.click();
+  toast(t('jsonExported'));
+}
+
+function exportCSV(){
+  if(!currentConfig)return;
+  const {dimScores}=calcTotalScore();
+  let csv='\uFEFF'+t('csvDim')+','+t('csvWeight')+','+t('csvAvg')+','+t('csvWeighted')+'\n';
+  dimScores.forEach(d=>{csv+=`${d.name},${d.weight}%,${d.avg.toFixed(2)},${d.weighted.toFixed(2)}\n`;});
+  csv+=`\n${t('csvDetail')}\n${t('csvDim')},${t('csvItem')},${t('csvScore')}\n`;
+  currentConfig.dimensions.forEach((dim,di)=>{
+    dim.items.forEach((it,ii)=>{csv+=`${dim.name},${it.name},${scores[di+'_'+ii]||0}\n`;});
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(_lang==='en'?'score_':'评分_')+`${document.getElementById('candName').value||'export'}.csv`;
+  a.click();
+  toast(t('csvExported'));
+}
+
+function resetScorecard(){
+  if(!confirm(t('resetConfirm')))return;
+  scores={};evidences={};
+  document.getElementById('candName').value='';
+  document.getElementById('overallComment').value='';
+  // Clear AI summary display
+  clearAiSummaryDisplay();
+  renderDimensions();
+  updateSummary();
+  toast(t('resetDone'));
+}
+
+// ===== COMPARE =====
+let _compareSelectedIds = new Set();
+
+function renderCompareSelect(){
+  const wrap=document.getElementById('compareGroupWrap');
+  const filter=document.getElementById('compareJobFilter');
+  if(!history.length){wrap.innerHTML='<p style="color:var(--text3);font-size:13px">'+t('compareNoData')+'</p>';return;}
+
+  // Collect unique job titles
+  const jobs=[...new Set(history.map(h=>h.configTitle||t('unknownJob')))];
+  filter.innerHTML='<option value="">'+t('filterAll')+'（'+history.length+t('filterPeople','')+'）</option>'+
+    jobs.map(j=>{
+      const cnt=history.filter(h=>(h.configTitle||t('unknownJob'))===j).length;
+      return `<option value="${escHtml(j)}">${escHtml(j.replace(' 面试评分卡',''))}（${cnt}${t('filterPeople','')}）</option>`;
+    }).join('');
+
+  renderCompareChips();
+}
+
+function renderCompareChips(){
+  const wrap=document.getElementById('compareGroupWrap');
+  const filterVal=document.getElementById('compareJobFilter').value;
+
+  // Filter history
+  const filtered=filterVal ? history.filter(h=>(h.configTitle||t('unknownJob'))===filterVal) : history;
+
+  if(!filtered.length){
+    wrap.innerHTML='<p style="color:var(--text3);font-size:13px;margin-top:12px">'+t('compareNoJob')+'</p>';
+    return;
+  }
+
+  // Group by job title
+  const groups={};
+  filtered.forEach(h=>{
+    const job=h.configTitle||t('unknownJob');
+    if(!groups[job])groups[job]=[];
+    groups[job].push(h);
+  });
+
+  const jobEntries=Object.entries(groups);
+  const showGroupTitle = !filterVal && jobEntries.length > 1;
+
+  let html='';
+  jobEntries.forEach(([job,items])=>{
+    if(showGroupTitle){
+      html+=`<div class="compare-group">
+        <div class="compare-group-title">📋 ${escHtml(job.replace(' 面试评分卡',''))} <span class="group-count">${items.length}${t('filterPeople','')}</span>
+          <span class="compare-select-all" onclick="selectGroupByJob('${escHtml(job)}')">${t('selectGroup')}</span>
+        </div>`;
+    }
+    html+=`<div class="compare-select">`;
+    items.forEach(h=>{
+      const sel=_compareSelectedIds.has(h.id)?'selected':'';
+      const jobShort=(h.configTitle||t('unknownJob')).replace(' 面试评分卡','');
+      const aiTag=h.aiSummary?' 🤖':'';
+      html+=`<div class="cand-chip ${sel}" data-id="${h.id}" data-job="${escHtml(h.configTitle||t('unknownJob'))}" onclick="toggleCompareChip(this)">
+        <span class="chip-name">${escHtml(h.name)}（${h.total.toFixed(1)}）${aiTag}</span>
+        <span class="chip-pos">${escHtml(jobShort)} · ${h.date||''}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+    if(showGroupTitle) html+=`</div>`;
+  });
+
+  wrap.innerHTML=html;
+}
+
+function toggleCompareChip(el){
+  const id=el.dataset.id;
+  if(_compareSelectedIds.has(id)){
+    _compareSelectedIds.delete(id);
+    el.classList.remove('selected');
+  } else {
+    _compareSelectedIds.add(id);
+    el.classList.add('selected');
+  }
+}
+
+function filterCompareByJob(){
+  renderCompareChips();
+}
+
+function selectAllVisible(){
+  document.querySelectorAll('#compareGroupWrap .cand-chip').forEach(el=>{
+    _compareSelectedIds.add(el.dataset.id);
+    el.classList.add('selected');
+  });
+}
+
+function clearAllSelected(){
+  _compareSelectedIds.clear();
+  document.querySelectorAll('#compareGroupWrap .cand-chip').forEach(el=>el.classList.remove('selected'));
+}
+
+function selectGroupByJob(job){
+  document.querySelectorAll('#compareGroupWrap .cand-chip').forEach(el=>{
+    if(el.dataset.job===job){
+      _compareSelectedIds.add(el.dataset.id);
+      el.classList.add('selected');
+    }
+  });
+}
+
+async function doCompare(){
+  const selected=Array.from(_compareSelectedIds);
+  if(selected.length<2){toast(t('compareMin'));return;}
+  const cands=selected.map(id=>history.find(h=>h.id===id)).filter(Boolean);
+  const rankColors=['rgba(16,185,129,.15)','rgba(79,70,229,.1)','rgba(245,158,11,.1)'];
+  const barColors=['#10b981','#4f46e5','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
+  const sorted=[...cands].sort((a,b)=>b.total-a.total);
+
+  // Rank cards with job info
+  const scoreUnit = _lang==='en'?' pts':' 分';
+  const rankHTML=sorted.map((r,i)=>{
+    const jobShort=(r.configTitle||t('unknownJob')).replace(' 面试评分卡','');
+    return `
+    <div class="rank-card" style="background:${rankColors[i]||'var(--bg2)'};">
+      <div class="rank-pos">#${i+1}</div>
+      <div class="rank-name">${escHtml(r.name)}</div>
+      <div class="rank-job">📋 ${escHtml(jobShort)}</div>
+      <div class="rank-score">${r.total.toFixed(2)}${scoreUnit}</div>
+    </div>`;
+  }).join('');
+
+  // Dimension comparison bars — with job info in name
+  const dims=cands[0].dimScores.map(d=>d.name);
+  const dimBarsHTML=dims.map(dname=>{
+    const rows=cands.map((c,ci)=>{
+      const ds=c.dimScores.find(d=>d.name===dname);
+      const pct=ds?(ds.avg/5*100).toFixed(0):0;
+      const jobShort=(c.configTitle||'').replace(' 面试评分卡','');
+      const nameLabel=c.name+(jobShort?'('+jobShort+')':'');
+      return `<div class="dim-bar-row">
+        <span class="dim-bar-name" title="${escHtml(nameLabel)}">${escHtml(c.name)}</span>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:${pct}%;background:${barColors[ci%barColors.length]}">${pct}%</div></div>
+      </div>`;
+    }).join('');
+    return `<div class="dim-bar-group"><div class="dim-bar-label">${escHtml(dname)}</div>${rows}</div>`;
+  }).join('');
+
+  // Check if comparing across different jobs
+  const jobSet=new Set(cands.map(c=>c.configTitle||''));
+  const crossJobNote = jobSet.size > 1 ?
+    `<div style="padding:10px 16px;border-radius:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);margin-bottom:16px;font-size:13px;color:var(--text2)">
+      ${t('crossJobWarn',{jobs:Array.from(jobSet).map(j=>escHtml(j.replace(' 面试评分卡',''))).join('、')})}
+    </div>` : '';
+
+  // Placeholder for AI comparative analysis (unified comparison conclusion)
+  const compareAiPlaceholder=`<div class="card" id="compareAiResult">
+    <div class="section-title">${t('compareAiTitle')}</div>
+    <div id="compareAiContent" style="padding:20px;text-align:center;color:var(--text3)">
+      <div class="loading-spinner" style="display:inline-block;width:24px;height:24px;border:3px solid var(--bg3);border-top-color:var(--pri);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle"></div>
+      <span style="vertical-align:middle">${t('compareAnalyzing')}</span>
+    </div>
+  </div>`;
+
+  document.getElementById('compareResult').innerHTML=`
+    ${crossJobNote}
+    <div class="card"><div class="section-title">${t('rankTitle')}</div><div class="rank-list">${rankHTML}</div></div>
+    <div class="card"><div class="section-title">${t('dimCompareTitle')}</div>${dimBarsHTML}</div>
+    <div class="card"><div class="section-title">${t('radarTitle')}</div><div class="radar-wrap"><canvas id="radarCanvas" class="radar" width="400" height="400"></canvas></div></div>
+    ${compareAiPlaceholder}
+  `;
+
+  // Draw radar chart
+  drawRadar(cands, dims, barColors);
+
+  // Trigger AI comparative analysis in background
+  doCompareAiAnalysis(cands);
+}
+
+// ===== AI COMPARATIVE ANALYSIS =====
+async function doCompareAiAnalysis(cands){
+  const container=document.getElementById('compareAiContent');
+  if(!container)return;
+  try{
+    // Build payload matching backend field names
+    const payload=cands.map(c=>{
+      // configTitle typically looks like "前端工程师 面试评分卡" — extract job title
+      const jobTitle=(c.configTitle||'').replace(/\s*面试评分卡$/,'').replace(/\s*Interview Scorecard$/i,'').trim()||c.configTitle||'';
+      // Compute maxScore from dimScores
+      const maxScore=c.dimScores?c.dimScores.reduce((s,d)=>s+(d.weight||1)*5,0):100;
+      return {
+        candidateName:c.name,
+        jobTitle:jobTitle,
+        totalScore:c.total,
+        maxScore:maxScore,
+        dimensions:c.dimScores||[],
+        comment:c.comment||'',
+        aiSummary:c.aiSummary||null
+      };
+    });
+    const result=await _apiPost('/api/ai/compare-candidates',{candidates:payload});
+    if(result && result.analysis && !result.error){
+      renderCompareAiResult(result.analysis, cands);
+    } else {
+      container.innerHTML=`<p style="color:var(--orange);font-size:13px">${t('compareAiFail')}${result.error||'未知错误'}</p>`;
+    }
+  }catch(e){
+    container.innerHTML=`<p style="color:var(--orange);font-size:13px">${t('compareAiFail')}${e.message}</p>`;
+  }
+}
+
+// Simple Markdown to HTML converter for AI analysis results
+function _md2html(md){
+  if(!md)return '';
+  return md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // Headers
+    .replace(/^### (.+)$/gm,'<h4 style="margin:12px 0 6px;font-size:14px;font-weight:600">$1</h4>')
+    .replace(/^## (.+)$/gm,'<h3 style="margin:16px 0 8px;font-size:15px;font-weight:600">$1</h3>')
+    .replace(/^# (.+)$/gm,'<h2 style="margin:18px 0 10px;font-size:16px;font-weight:700">$1</h2>')
+    // Bold & Italic
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    // Unordered list items
+    .replace(/^[-*] (.+)$/gm,'<li style="margin:2px 0;line-height:1.6">$1</li>')
+    // Ordered list items
+    .replace(/^\d+\.\s+(.+)$/gm,'<li style="margin:2px 0;line-height:1.6">$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g,'<ul style="padding-left:20px;margin:6px 0">$1</ul>')
+    // Simple table support
+    .replace(/^\|(.+)\|$/gm,(match,inner)=>{
+      const cells=inner.split('|').map(c=>c.trim());
+      if(cells.every(c=>/^[-:]+$/.test(c)))return ''; // separator row
+      const tag=cells.some(c=>/\*\*/.test(c))?'th':'td';
+      return '<tr>'+cells.map(c=>`<${tag} style="padding:6px 10px;border:1px solid var(--bg3);text-align:left">${c}</${tag}>`).join('')+'</tr>';
+    })
+    .replace(/((?:<tr>.*<\/tr>\n?)+)/g,'<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px">$1</table>')
+    // Horizontal rules
+    .replace(/^---+$/gm,'<hr style="border:none;border-top:1px solid var(--bg3);margin:12px 0">')
+    // Paragraphs (double newline)
+    .replace(/\n\n/g,'</p><p style="margin:8px 0;line-height:1.6">')
+    // Single newlines to <br>
+    .replace(/\n/g,'<br>');
+}
+
+function renderCompareAiResult(analysis, cands){
+  const container=document.getElementById('compareAiContent');
+  if(!container)return;
+
+  // analysis is a Markdown string from the backend
+  const html=`<div style="text-align:left;padding:4px 0;font-size:13.5px;color:var(--text1);line-height:1.7">
+    <p style="margin:8px 0;line-height:1.6">${_md2html(typeof analysis==='string'?analysis:JSON.stringify(analysis))}</p>
+  </div>`;
+
+  container.innerHTML=html;
+}
+
+function drawRadar(cands, dims, colors){
+  const canvas=document.getElementById('radarCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const cx=W/2, cy=H/2, R=Math.min(cx,cy)-50;
+  const n=dims.length;
+  const angleStep=Math.PI*2/n;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  for(let level=1;level<=5;level++){
+    const r=R*level/5;
+    ctx.beginPath();
+    for(let i=0;i<=n;i++){
+      const a=-Math.PI/2+angleStep*i;
+      const x=cx+r*Math.cos(a);
+      const y=cy+r*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg3').trim()||'#ddd';
+    ctx.lineWidth=1;
+    ctx.stroke();
+  }
+
+  // Axes & labels
+  dims.forEach((label,i)=>{
+    const a=-Math.PI/2+angleStep*i;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
+    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg3').trim()||'#ddd';
+    ctx.stroke();
+    const lx=cx+(R+25)*Math.cos(a);
+    const ly=cy+(R+25)*Math.sin(a);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--text2').trim()||'#666';
+    ctx.font='12px sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(label.length>5?label.slice(0,5)+'…':label,lx,ly);
+  });
+
+  // Data polygons
+  cands.forEach((c,ci)=>{
+    ctx.beginPath();
+    dims.forEach((dname,i)=>{
+      const ds=c.dimScores.find(d=>d.name===dname);
+      const val=ds?ds.avg:0;
+      const r=R*val/5;
+      const a=-Math.PI/2+angleStep*i;
+      const x=cx+r*Math.cos(a);
+      const y=cy+r*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.closePath();
+    const color=colors[ci%colors.length];
+    ctx.fillStyle=color+'33';
+    ctx.fill();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2;
+    ctx.stroke();
+  });
+
+  // Legend with job info
+  let ly=H-20;
+  cands.forEach((c,ci)=>{
+    const jobShort=(c.configTitle||'').replace(' 面试评分卡','');
+    const label=c.name+(jobShort?' ('+jobShort+')':'');
+    const lx=20+ci*160;
+    ctx.fillStyle=colors[ci%colors.length];
+    ctx.fillRect(lx,ly,12,12);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--text1').trim()||'#333';
+    ctx.font='11px sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(label.length>16?label.slice(0,16)+'…':label,lx+16,ly+10);
+  });
+}
+
+// ===== (AI Import removed — AI summary is now generated at save time) =====
+
+function getRecLabel(rec){
+  const recMap = {
+    'strong_hire': t('aiRecStrong'),
+    'hire': t('aiRecHire'),
+    'hold': t('aiRecHold'),
+    'no_hire': t('aiRecNoHire')
+  };
+  return recMap[rec] || rec;
+}
+
+function renderAISummaryPanel(h){
+  if(!h.aiSummary) return '';
+  const s = h.aiSummary;
+  const rec = s.recommendation || 'hold';
+
+  let strengthsHTML = '';
+  if(s.strengths && s.strengths.length){
+    strengthsHTML = `<div class="ai-detail-box ai-strengths">
+      <h5>${t('aiStrengthsTitle')}</h5>
+      <ul>${s.strengths.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul>
+    </div>`;
+  }
+
+  let improvementsHTML = '';
+  if(s.improvements && s.improvements.length){
+    improvementsHTML = `<div class="ai-detail-box ai-improvements">
+      <h5>${t('aiImprovementsTitle')}</h5>
+      <ul>${s.improvements.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul>
+    </div>`;
+  }
+
+  let nextStepsHTML = '';
+  if(s.nextSteps && s.nextSteps.length){
+    nextStepsHTML = `<div class="ai-next-steps">
+      <h5>${t('aiNextSteps')}</h5>
+      <ul>${s.nextSteps.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul>
+    </div>`;
+  }
+
+  let dimCommentsHTML = '';
+  if(s.dimensionComments && Object.keys(s.dimensionComments).length){
+    const entries = Object.entries(s.dimensionComments);
+    dimCommentsHTML = `<div class="ai-dim-comments">
+      <details>
+        <summary>${t('aiDimComments')}（${entries.length}）</summary>
+        ${entries.map(([dim,comment])=>`<p><strong>${escHtml(dim)}：</strong>${escHtml(comment)}</p>`).join('')}
+      </details>
+    </div>`;
+  }
+
+  return `<div class="ai-summary-panel">
+    <h4>🤖 ${escHtml(h.name)} - ${t('aiSummarySection')}</h4>
+    <div style="margin-bottom:10px">
+      <span class="ai-rec ${rec}">${t('aiRecommendation')}：${getRecLabel(rec)}</span>
+      ${s.recommendationReason ? `<span style="font-size:12px;color:var(--text3);margin-left:8px">${escHtml(s.recommendationReason)}</span>` : ''}
+    </div>
+    ${s.overallAssessment ? `<div class="ai-overall">${escHtml(s.overallAssessment)}</div>` : ''}
+    <div class="ai-detail-grid">
+      ${strengthsHTML}
+      ${improvementsHTML}
+    </div>
+    ${nextStepsHTML}
+    ${dimCommentsHTML}
+  </div>`;
+}
+
+// ===== INIT =====
+window.onload=function(){
+  // Theme
+  const theme=localStorage.getItem('isc_theme');
+  if(theme)document.documentElement.setAttribute('data-theme',theme);
+
+  renderTemplates();
+  renderSavedConfigs();
+  renderHistory();
+
+  // Restore draft
+  try{
+    const draft=JSON.parse(localStorage.getItem('isc_draft'));
+    if(draft&&draft.config){
+      // Detect lang from draft config
+      const draftLang = detectLang(draft.config);
+      if(draftLang !== _lang) setLang(draftLang);
+      currentConfig=draft.config;
+      scores=draft.scores||{};
+      evidences=draft.evidences||{};
+      document.getElementById('scTitle').textContent=draft.config.title;
+      document.getElementById('scDesc').textContent=draft.config.description||'';
+      renderDimensions();
+      Object.entries(scores).forEach(([k,v])=>{
+        const [di,ii]=k.split('_');
+        renderStarState(parseInt(di),parseInt(ii));
+        const sv=document.getElementById('sv_'+di+'_'+ii);
+        if(sv)sv.textContent=v;
+      });
+      Object.entries(evidences).forEach(([di,txt])=>{
+        const ta=document.querySelectorAll('.dimension')[parseInt(di)]?.querySelector('.evidence-box textarea');
+        if(ta)ta.value=txt;
+      });
+      if(draft.name)document.getElementById('candName').value=draft.name;
+      if(draft.date)document.getElementById('candDate').value=draft.date;
+      if(draft.interviewer)document.getElementById('interviewer').value=draft.interviewer;
+      if(draft.comment)document.getElementById('overallComment').value=draft.comment;
+      currentConfig.dimensions.forEach((_,di)=>updateDimScore(di));
+      updateSummary();
+    }
+  }catch(e){}
+};
+
+// ===== JD AI GENERATE =====
+function showJDModal(){document.getElementById('jdModal').classList.add('show')}
+function closeJDModal(){document.getElementById('jdModal').classList.remove('show');document.getElementById('jdStatus').style.display='none'}
+async function doJDGenerate(){
+  const jd=document.getElementById('jdInput').value.trim();
+  if(!jd||jd.length<30){toast('请输入至少 30 个字符的 JD 内容');return}
+  const btn=document.getElementById('btnJDGenerate');
+  const status=document.getElementById('jdStatus');
+  btn.disabled=true;btn.textContent='⏳ AI 正在分析 JD...';
+  status.style.display='block';status.textContent='正在调用 AI 生成评分配置，请稍候...';
+  try{
+    const resp=await fetch('/api/ai/generate-pro-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jd})});
+    const result=await resp.json();
+    if(result.error){toast('生成失败：'+result.error);status.textContent='生成失败：'+result.error;return}
+    const config=result.config;
+    closeJDModal();
+    document.getElementById('importJSON').value=JSON.stringify(config,null,2);
+    doImport();
+    toast('🤖 AI 已生成评分配置并自动导入！');
+  }catch(err){
+    toast('请求失败: '+err.message);
+    status.textContent='请求失败：'+err.message;
+  }finally{
+    btn.disabled=false;btn.textContent='🤖 生成评分配置';
+  }
+}
+
+// ===== BACKEND API HELPERS =====
+async function _apiPost(url, body){
+  try{
+    const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    return await resp.json();
+  }catch(e){return {error:e.message}}
+}
+async function _apiGet(url){
+  try{const resp=await fetch(url);return await resp.json();}catch(e){return {error:e.message}}
+}
+
+// ===== AI CONFIG PANEL =====
+let _aiPresets=[];
+function showAiConfigPanel(){document.getElementById('aiConfigPanel').classList.add('show');loadAiPresets();}
+function closeAiConfigPanel(){document.getElementById('aiConfigPanel').classList.remove('show')}
+async function loadAiPresets(){
+  if(_aiPresets.length)return renderAiPresets();
+  const data=await _apiGet('/api/ai/presets');
+  if(Array.isArray(data)){_aiPresets=data;renderAiPresets();}
+}
+function renderAiPresets(){
+  const el=document.getElementById('aiPresetChips');
+  if(!el)return;
+  el.innerHTML=_aiPresets.map((p,i)=>`<span class="btn btn-sm btn-ghost" style="margin:3px" onclick="selectAiPreset(${i})">${p.name}</span>`).join('');
+}
+let _selectedAiPresetId='';
+function selectAiPreset(idx){
+  const p=_aiPresets[idx];
+  _selectedAiPresetId=p.id||'';
+  document.getElementById('aiCfgBaseUrl').value=p.baseUrl;
+  document.getElementById('aiCfgModel').value=p.model;
+  document.getElementById('aiCfgHint').textContent=p.hint||'';
+  document.getElementById('aiCfgKey').placeholder=p.id==='minimax_token_plan'?'输入 Token Plan Key（如 sk-cp-...）':'输入 API Key';
+}
+async function saveAiConfigPro(){
+  const apiKey=document.getElementById('aiCfgKey').value.trim();
+  const baseUrl=document.getElementById('aiCfgBaseUrl').value.trim();
+  const model=document.getElementById('aiCfgModel').value.trim();
+  if(!apiKey){toast('请输入 API Key');return}
+  const inferred=apiKey.startsWith('sk-cp-')?'minimax_token_plan':'';
+  const providerName=_selectedAiPresetId||inferred;
+  const btn=document.getElementById('btnSaveAiCfg');
+  btn.disabled=true;btn.textContent='验证中...';
+  try{
+    const result=await _apiPost('/api/ai/configure',{apiKey,baseUrl,model,providerName});
+    if(result.error){toast('配置失败：'+result.error);}
+    else{toast('✅ AI 配置成功：'+(result.provider||'')+' '+result.model);closeAiConfigPanel();checkAiStatus();}
+  }finally{btn.disabled=false;btn.textContent='验证并保存'}
+}
+async function resetAiConfigPro(){
+  await _apiPost('/api/ai/reset',{});
+  toast('已清除 AI 配置');closeAiConfigPanel();checkAiStatus();
+}
+
+// ===== AI STATUS =====
+async function checkAiStatus(){
+  const dot=document.getElementById('aiDotIcon');
+  const label=document.getElementById('aiDotLabel');
+  const btn=document.getElementById('aiStatusBtn');
+  const banner=document.getElementById('aiSetupBanner');
+  try{
+    const data=await _apiGet('/api/ai/status');
+    if(data.configured){
+      dot.style.background='#fff';
+      const modelInfo=(data.provider?data.provider+' · ':'')+data.model;
+      label.textContent='✅ '+modelInfo;
+      if(btn){btn.classList.add('ai-connected')}
+      if(banner){banner.style.display='none'}
+    }else{
+      dot.style.background='#fff';dot.style.opacity='.8';
+      label.textContent=t('aiNotConnected');
+      if(btn){btn.classList.remove('ai-connected')}
+      if(banner){banner.style.display='block'}
+    }
+  }catch(e){
+    dot.style.background='#fff';
+    label.textContent='❌ AI 服务异常';
+    if(btn){btn.classList.remove('ai-connected');btn.style.background='linear-gradient(135deg,var(--red),#dc2626)'}
+    if(banner){banner.style.display='block'}
+  }
+}
+
+// ===== BUILD RECORD HELPER =====
+function _buildCurrentRecord(){
+  if(!currentConfig)return null;
+  const name=document.getElementById('candName').value.trim();
+  if(!name){toast(t('nameMissing'));return null;}
+  const {total,dimScores}=calcTotalScore();
+  return {
+    id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name, date:document.getElementById('candDate').value,
+    interviewer:document.getElementById('interviewer').value,
+    configTitle:currentConfig.title,
+    lang: _lang,
+    total, dimScores, scores:{...scores}, evidences:{...evidences},
+    comment:document.getElementById('overallComment').value,
+    config:currentConfig, savedAt:new Date().toISOString()
+  };
+}
+
+function _persistRecord(record){
+  history.unshift(record);
+  if(history.length>50)history=history.slice(0,50);
+  localStorage.setItem('isc_history',JSON.stringify(history));
+  _apiPost('/api/pro/records',record).catch(()=>{});
+  renderHistory();
+}
+
+// ===== SAVE RECORD (pure save, no AI) =====
+function doSaveRecord(){
+  const record=_buildCurrentRecord();
+  if(!record)return;
+  // If AI summary already generated for this candidate, attach it
+  const existing=history.find(h=>h.name===record.name && h.configTitle===record.configTitle);
+  if(existing && existing.aiSummary) record.aiSummary=existing.aiSummary;
+  _persistRecord(record);
+  toast(t('saved')+record.name);
+}
+
+// ===== AI SUMMARY (standalone — generates summary then saves) =====
+async function doAiSummary(){
+  const record=_buildCurrentRecord();
+  if(!record)return;
+  if(!Object.keys(scores).length){toast(t('needScoresFirst'));return;}
+
+  const btn=document.getElementById('btnAiSummary');
+  const origText=btn.textContent;
+  btn.disabled=true;
+  btn.textContent=t('aiAnalyzing');
+  btn.style.opacity='0.7';
+
+  try{
+    const aiPayload={
+      name:record.name, configTitle:record.configTitle,
+      total:record.total, dimScores:record.dimScores,
+      scores:record.scores, evidences:record.evidences,
+      comment:record.comment
+    };
+    const result=await _apiPost('/api/ai/generate-pro-summary',{record:aiPayload});
+    if(result && result.aiSummary && !result.error){
+      record.aiSummary=result.aiSummary;
+      showAiSummaryResult(record.aiSummary, record.name);
+      // Auto-save with AI summary
+      _persistRecord(record);
+      toast(t('aiSummaryDone'));
+    } else {
+      toast(t('aiSummaryFail')+(result.error||''));
+    }
+  }catch(e){
+    toast(t('aiSummaryFail')+e.message);
+  }finally{
+    btn.disabled=false;
+    btn.textContent=origText;
+    btn.style.opacity='1';
+  }
+}
+
+// ===== AI SUMMARY DISPLAY =====
+function showAiSummaryResult(s, candidateName){
+  const recLabel={'strong_hire':'强烈推荐','hire':'推荐','hold':'待定','no_hire':'不推荐'};
+  let html=`<div class="card" style="border-left:4px solid var(--pri);margin-top:16px">
+    <div class="section-title">🤖 AI 面试总结 — ${escHtml(candidateName)}</div>
+    <div style="margin-bottom:12px"><span class="btn btn-sm" style="background:var(--pri-light);color:var(--pri);font-weight:600">${recLabel[s.recommendation]||s.recommendation}</span>
+    <span style="font-size:13px;color:var(--text2);margin-left:8px">${escHtml(s.recommendationReason||'')}</span></div>
+    <p style="margin-bottom:12px;color:var(--text2)">${escHtml(s.overallAssessment||'')}</p>`;
+  if(s.strengths&&s.strengths.length)html+=`<div style="margin-bottom:8px"><strong style="color:var(--green)">✅ 核心优势</strong><ul>${s.strengths.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul></div>`;
+  if(s.improvements&&s.improvements.length)html+=`<div style="margin-bottom:8px"><strong style="color:var(--orange)">⚠️ 待改进</strong><ul>${s.improvements.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul></div>`;
+  if(s.nextSteps&&s.nextSteps.length)html+=`<div style="margin-bottom:8px"><strong>📋 后续行动</strong><ul>${s.nextSteps.map(x=>'<li>'+escHtml(x)+'</li>').join('')}</ul></div>`;
+  if(s.dimensionComments){
+    html+=`<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">📊 各维度点评</summary>`;
+    Object.entries(s.dimensionComments).forEach(([dim,comment])=>{html+=`<p style="margin:4px 0"><strong>${escHtml(dim)}：</strong>${escHtml(comment)}</p>`;});
+    html+=`</details>`;
+  }
+  html+=`</div>`;
+  let target=document.getElementById('aiSummaryResult');
+  if(!target){target=document.createElement('div');target.id='aiSummaryResult';document.getElementById('summaryCard')?.after(target);}
+  target.innerHTML=html;
+  target.scrollIntoView({behavior:'smooth'});
+}
+
+function clearAiSummaryDisplay(){
+  const el=document.getElementById('aiSummaryResult');
+  if(el) el.innerHTML='';
+}
+
+// ===== FILE IMPORT (CSV / JSON) FOR COMPARE =====
+function triggerFileImport(){
+  document.getElementById('fileImportInput').click();
+}
+
+function handleFileImport(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const content=e.target.result;
+    try{
+      if(file.name.endsWith('.json')){
+        importFromJSON(content);
+      } else if(file.name.endsWith('.csv')){
+        importFromCSV(content);
+      } else {
+        toast(t('fileImportFail')+'Unsupported file type');
+      }
+    }catch(err){
+      toast(t('fileImportFail')+err.message);
+    }
+    // Reset input so same file can be re-imported
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+function importFromJSON(content){
+  let data;
+  try{ data=JSON.parse(content); }catch(e){ toast(t('fileImportFail')+e.message); return; }
+
+  // Support both single record and array of records
+  const records=Array.isArray(data)?data:[data];
+  if(!records.length){ toast(t('fileImportNoRecords')); return; }
+
+  let added=0;
+  records.forEach(d=>{
+    // Accept both exported record format and simplified format
+    const name=d.name||d.candidate||'';
+    if(!name)return;
+    const configTitle=d.configTitle||d.title||t('unknownJob');
+
+    // Check for duplicates
+    const exists=history.find(h=>h.name===name && h.configTitle===configTitle && h.date===(d.date||''));
+    if(exists){
+      // Update existing record if new data has aiSummary
+      if(d.aiSummary) exists.aiSummary=d.aiSummary;
+      return;
+    }
+
+    const record={
+      id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+added,
+      name,
+      date:d.date||new Date().toISOString().slice(0,10),
+      interviewer:d.interviewer||'',
+      configTitle,
+      lang:d.lang||_lang,
+      total:d.total||0,
+      dimScores:d.dimScores||[],
+      scores:d.scores||{},
+      evidences:d.evidences||{},
+      comment:d.comment||'',
+      config:d.config||{title:configTitle,dimensions:(d.dimScores||[]).map(ds=>({name:ds.name,weight:ds.weight,items:[]}))},
+      aiSummary:d.aiSummary||null,
+      savedAt:new Date().toISOString()
+    };
+    history.unshift(record);
+    added++;
+  });
+
+  if(added>0){
+    if(history.length>50)history=history.slice(0,50);
+    localStorage.setItem('isc_history',JSON.stringify(history));
+    renderHistory();
+    renderCompareSelect();
+    toast(t('fileImportSuccess',{count:added}));
+  } else {
+    toast(t('fileImportNoRecords'));
+  }
+}
+
+function importFromCSV(content){
+  const lines=content.trim().split('\n');
+  if(lines.length<2){ toast(t('fileImportEmpty')); return; }
+
+  // Parse header
+  const headers=parseCSVLine(lines[0]).map(h=>h.trim().toLowerCase());
+  const nameIdx=headers.findIndex(h=>h==='name'||h==='candidate'||h==='姓名'||h==='候选人');
+  const totalIdx=headers.findIndex(h=>h==='total'||h==='score'||h==='总分'||h==='得分');
+  const jobIdx=headers.findIndex(h=>h==='job'||h==='position'||h==='configtitle'||h==='title'||h==='岗位'||h==='职位');
+  const dateIdx=headers.findIndex(h=>h==='date'||h==='日期');
+  const interviewerIdx=headers.findIndex(h=>h==='interviewer'||h==='面试官');
+  const commentIdx=headers.findIndex(h=>h==='comment'||h==='评价'||h==='综合评价');
+
+  if(nameIdx<0){ toast(t('fileImportFail')+'Missing "name" or "candidate" column'); return; }
+
+  // Detect dimension columns: anything not in known columns
+  const knownCols=new Set([nameIdx,totalIdx,jobIdx,dateIdx,interviewerIdx,commentIdx]);
+  const dimCols=[];
+  headers.forEach((h,i)=>{
+    if(!knownCols.has(i)&&h){ dimCols.push({index:i,name:headers[i]}); }
+  });
+
+  let added=0;
+  for(let i=1;i<lines.length;i++){
+    const vals=parseCSVLine(lines[i]);
+    if(!vals.length)continue;
+    const name=(vals[nameIdx]||'').trim();
+    if(!name)continue;
+    const configTitle=(jobIdx>=0?vals[jobIdx]:'').trim()||t('unknownJob');
+    const date=(dateIdx>=0?vals[dateIdx]:'').trim()||new Date().toISOString().slice(0,10);
+
+    // Check for duplicates
+    const exists=history.find(h=>h.name===name && h.configTitle===configTitle && h.date===date);
+    if(exists)continue;
+
+    const total=totalIdx>=0?parseFloat(vals[totalIdx])||0:0;
+
+    // Build dimScores from dimension columns
+    const dimScores=dimCols.map(dc=>{
+      const val=parseFloat(vals[dc.index])||0;
+      return {name:dc.name, score:val, weight:1};
+    });
+    const overallTotal=dimScores.length?dimScores.reduce((s,d)=>s+d.score,0)/dimScores.length:total;
+
+    const record={
+      id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+i,
+      name, date,
+      interviewer:(interviewerIdx>=0?vals[interviewerIdx]:'').trim(),
+      configTitle,
+      lang:_lang,
+      total:total||overallTotal,
+      dimScores,
+      scores:{}, evidences:{},
+      comment:(commentIdx>=0?vals[commentIdx]:'').trim(),
+      config:{title:configTitle,dimensions:dimCols.map(dc=>({name:dc.name,weight:1,items:[]}))},
+      aiSummary:null,
+      savedAt:new Date().toISOString()
+    };
+    history.unshift(record);
+    added++;
+  }
+
+  if(added>0){
+    if(history.length>50)history=history.slice(0,50);
+    localStorage.setItem('isc_history',JSON.stringify(history));
+    renderHistory();
+    renderCompareSelect();
+    toast(t('fileImportSuccess',{count:added}));
+  } else {
+    toast(t('fileImportNoRecords'));
+  }
+}
+
+function parseCSVLine(line){
+  const result=[];
+  let current='';
+  let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(inQuotes){
+      if(ch==='"'&&line[i+1]==='"'){current+='"';i++;}
+      else if(ch==='"'){inQuotes=false;}
+      else{current+=ch;}
+    } else {
+      if(ch==='"'){inQuotes=true;}
+      else if(ch===','){result.push(current);current='';}
+      else{current+=ch;}
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// ===== INIT: check AI status on load =====
+const _origOnload=window.onload;
+window.onload=function(){
+  if(_origOnload)_origOnload();
+  checkAiStatus();
+};
+</script>
+</body>
+</html>

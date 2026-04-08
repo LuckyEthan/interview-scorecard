@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试评分系统</title>
+<style>
+/* ========== 全局样式 ========== */
+:root {
+  --primary: #4F46E5;
+  --primary-light: #818CF8;
+  --primary-bg: #EEF2FF;
+  --success: #059669;
+  --success-bg: #ECFDF5;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  --star-color: #F59E0B;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ========== 布局 ========== */
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 左侧导航栏 */
+.sidebar {
+  width: 280px;
+  background: white;
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.sidebar-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-header .subtitle {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+
+/* AI 状态栏（侧边栏底部） */
+.ai-status-bar {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ai-status-bar:hover {
+  background: var(--gray-100);
+}
+
+.ai-status-bar .status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ai-status-bar .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ai-status-bar .status-dot.online { background: var(--success); }
+.ai-status-bar .status-dot.offline { background: var(--danger); }
+.ai-status-bar .status-dot.detecting { background: var(--warning); animation: pulse 1.5s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.ai-status-bar .status-label {
+  font-weight: 500;
+  color: var(--gray-700);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-status-bar .status-hint {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.sidebar-nav {
+  padding: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px 6px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gray-600);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.nav-btn:hover { background: var(--gray-100); color: var(--gray-800); }
+.nav-btn.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+
+.nav-btn .icon { font-size: 18px; width: 24px; text-align: center; }
+
+/* 历史评分表列表 */
+.history-list {
+  padding: 8px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+
+.history-item:hover { background: var(--gray-100); }
+.history-item.active { background: var(--primary-bg); border-color: var(--primary-light); }
+
+.history-item .item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item .item-meta {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.history-item .item-score {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 960px;
+}
+
+@media (min-width: 1400px) {
+  .main-content { max-width: 1100px; }
+}
+
+/* ========== 页面通用 ========== */
+.page { display: none; }
+.page.active { display: block; }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 8px;
+}
+
+.page-desc {
+  font-size: 14px;
+  color: var(--gray-500);
+  margin-bottom: 28px;
+}
+
+/* 卡片 */
+.card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--gray-800);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 文本域 */
+textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 14px 16px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s;
+  color: var(--gray-800);
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+textarea::placeholder { color: var(--gray-400); }
+
+/* 输入框 */
+input[type="text"], input[type="password"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  color: var(--gray-800);
+}
+
+input[type="text"]:focus, input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: var(--gray-800);
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #4338CA; transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-secondary { background: white; color: var(--gray-700); border: 1px solid var(--gray-300); }
+.btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-400); }
+
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #047857; }
+
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { background: #B91C1C; }
+
+.btn-ghost { background: transparent; color: var(--gray-500); padding: 6px 10px; }
+.btn-ghost:hover { color: var(--danger); }
+
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+.btn-lg { padding: 14px 28px; font-size: 16px; }
+
+.btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* spinner */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.spinner-dark {
+  border-color: rgba(0,0,0,0.1);
+  border-top-color: var(--primary);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========== 评分表页面 ========== */
+.scorecard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.scorecard-header-info { flex: 1; }
+
+.scorecard-header-info .job-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.candidate-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.candidate-input-row label {
+  font-size: 14px;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+
+.candidate-input-row input { max-width: 260px; }
+
+/* 总分展示 */
+.score-overview { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+
+.score-overview-card {
+  flex: 1;
+  min-width: 100px;
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.score-overview-card .label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+.score-overview-card .value { font-size: 28px; font-weight: 700; color: var(--primary); }
+.score-overview-card .value.good { color: var(--success); }
+.score-overview-card .value.mid { color: var(--warning); }
+.score-overview-card .value.low { color: var(--danger); }
+.score-overview-card .sub { font-size: 12px; color: var(--gray-400); }
+
+/* 维度卡片 */
+.dimension-card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.dimension-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.dimension-name { font-size: 15px; font-weight: 600; color: var(--gray-800); }
+
+.dimension-score {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-bg);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.dimension-items { padding: 12px 20px; }
+
+.score-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.score-item:last-child { border-bottom: none; }
+
+.score-item-info { flex: 1; min-width: 0; }
+.score-item-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+
+.score-item-guide {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+  cursor: help;
+}
+
+/* 星星评分 */
+.star-rating { display: flex; gap: 4px; flex-shrink: 0; margin-left: 16px; }
+
+.star {
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--gray-300);
+  transition: all 0.12s;
+  user-select: none;
+  line-height: 1;
+}
+
+.star:hover { transform: scale(1.2); }
+.star.active { color: var(--star-color); }
+.star.hover-preview { color: #FCD34D; }
+
+/* 雷达图 */
+.radar-container { display: flex; justify-content: center; padding: 20px; }
+.radar-container canvas { max-width: 360px; max-height: 360px; }
+
+/* AI 总结区域 */
+.ai-summary-content {
+  min-height: 100px;
+  padding: 16px;
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--gray-200);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--gray-700);
+}
+
+.ai-summary-content.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400);
+  gap: 10px;
+}
+
+/* 对比页面 */
+.compare-grid { display: grid; gap: 12px; margin-bottom: 24px; }
+
+.compare-candidate-card {
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.compare-candidate-card:hover { border-color: var(--primary-light); }
+.compare-candidate-card.selected { border-color: var(--primary); background: var(--primary-bg); }
+.compare-candidate-card.disabled {
+  opacity: 0.55;
+  background: var(--gray-50);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.compare-candidate-card.disabled:hover { border-color: var(--gray-200); }
+
+.compare-candidate-card .check {
+  width: 22px; height: 22px;
+  border: 2px solid var(--gray-300);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 14px; color: white;
+  transition: all 0.15s;
+}
+
+.compare-candidate-card.selected .check {
+  background: var(--primary); border-color: var(--primary);
+}
+
+.compare-candidate-info { flex: 1; min-width: 0; }
+.compare-candidate-info .name { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+.compare-candidate-info .meta { font-size: 12px; color: var(--gray-400); }
+.compare-candidate-info .score-badge { font-size: 18px; font-weight: 700; color: var(--primary); }
+
+/* Markdown 渲染 */
+.md-render h1 { font-size: 20px; margin: 20px 0 10px; color: var(--gray-800); }
+.md-render h2 { font-size: 17px; margin: 16px 0 8px; color: var(--gray-800); }
+.md-render h3 { font-size: 15px; margin: 14px 0 6px; color: var(--gray-800); }
+.md-render p { margin: 8px 0; }
+.md-render ul, .md-render ol { padding-left: 20px; margin: 8px 0; }
+.md-render strong { color: var(--gray-900); }
+.md-render table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.md-render th, .md-render td { padding: 8px 12px; border: 1px solid var(--gray-200); font-size: 13px; text-align: left; }
+.md-render th { background: var(--gray-50); font-weight: 600; }
+
+/* ========== AI 配置弹窗 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal-box {
+  background: white;
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-box h3 { font-size: 18px; margin-bottom: 6px; }
+.modal-box .modal-desc { font-size: 13px; color: var(--gray-500); margin-bottom: 20px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 6px; }
+.form-group .hint { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+
+.preset-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.preset-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  background: white;
+  color: var(--gray-600);
+  transition: all 0.15s;
+}
+
+.preset-chip:hover { border-color: var(--primary); color: var(--primary); }
+.preset-chip.active { background: var(--primary-bg); border-color: var(--primary); color: var(--primary); font-weight: 500; }
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease;
+  max-width: 400px;
+}
+
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.info { background: var(--primary); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 空状态 */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--gray-400); }
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state .title { font-size: 16px; font-weight: 600; color: var(--gray-600); margin-bottom: 8px; }
+.empty-state .desc { font-size: 14px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- 左侧导航 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>🎯 面试评分系统</h1>
+      <div class="subtitle">AI 驱动 · 零配置即用</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-title">功能</div>
+      <button class="nav-btn active" onclick="showPage('page-new')" data-page="page-new">
+        <span class="icon">✨</span> 新建评分表
+      </button>
+      <button class="nav-btn" onclick="showPage('page-compare')" data-page="page-compare">
+        <span class="icon">📊</span> 候选人对比
+      </button>
+
+      <div class="nav-section-title" style="margin-top: 16px;">历史评分表</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- AI 状态栏（底部） -->
+    <div class="ai-status-bar" id="aiStatusBar" onclick="openAiConfigModal()">
+      <div class="status-row">
+        <span class="status-dot detecting" id="aiDot"></span>
+        <span class="status-label" id="aiLabel">检测 AI 服务中...</span>
+      </div>
+      <div class="status-hint" id="aiHint">点击配置</div>
+    </div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="main-content" id="mainContent">
+
+    <!-- 页面：新建评分表 -->
+    <div class="page active" id="page-new">
+      <h2 class="page-title">✨ 新建面试评分表</h2>
+      <p class="page-desc">粘贴岗位 JD，AI 自动生成专业的面试评估维度</p>
+
+      <div class="card">
+        <div class="card-title">📋 岗位 JD（Job Description）</div>
+        <textarea id="jdInput" placeholder="请粘贴完整的岗位描述，包括职责和要求...&#10;&#10;例如：&#10;岗位名称：高级前端工程师&#10;职责：&#10;1. 负责公司核心产品的前端开发...&#10;要求：&#10;1. 5年以上前端开发经验..."></textarea>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-lg" id="btnGenerate" onclick="generateDimensions()">
+            🤖 AI 生成评分维度
+          </button>
+        </div>
+      </div>
+
+      <div id="dimensionsPreview" style="display:none;">
+        <div class="card">
+          <div class="card-title">🎯 AI 生成的评分维度 <span style="font-size:12px; font-weight:400; color:var(--primary); background:var(--primary-bg); padding:2px 8px; border-radius:4px; margin-left:8px;">🤖 AI 智能生成</span></div>
+          <div id="dimensionsPreviewContent"></div>
+          <div class="btn-group">
+            <button class="btn btn-success" onclick="confirmAndCreateScorecard()">✅ 确认并创建评分表</button>
+            <button class="btn btn-secondary" onclick="openEditDimensions()">✏️ 编辑维度</button>
+            <button class="btn btn-secondary" onclick="generateDimensions()">🔄 重新生成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 编辑维度弹窗 -->
+      <div class="modal-overlay" id="editDimensionsModal">
+        <div class="modal-box" style="max-width:640px; max-height:85vh; overflow-y:auto;">
+          <h3>✏️ 编辑评分维度</h3>
+          <p class="modal-desc">修改 AI 生成的维度名称和评分项，点击保存后生效。</p>
+          <div id="editDimensionsContent"></div>
+          <div class="btn-group" style="justify-content:flex-end; margin-top:16px;">
+            <button class="btn btn-secondary" onclick="closeEditDimensions()">取消</button>
+            <button class="btn btn-primary" onclick="saveEditedDimensions()">💾 保存修改</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页面：评分表 -->
+    <div class="page" id="page-scorecard">
+      <div class="scorecard-header">
+        <div class="scorecard-header-info">
+          <div class="job-title" id="scJobTitle"></div>
+          <div class="candidate-input-row">
+            <label>候选人姓名：</label>
+            <input type="text" id="scCandidateName" placeholder="输入候选人姓名" oninput="onCandidateNameChange()">
+          </div>
+        </div>
+        <div class="btn-group" style="margin-top:0;">
+          <button class="btn btn-secondary btn-sm" onclick="saveScorecard()">💾 保存</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteCurrentScorecard()" title="删除">🗑️</button>
+        </div>
+      </div>
+
+      <div class="score-overview" id="scoreOverview"></div>
+
+      <div class="card">
+        <div class="card-title">📈 能力雷达图</div>
+        <div class="radar-container">
+          <canvas id="radarCanvas" width="360" height="360"></canvas>
+        </div>
+      </div>
+
+      <div id="dimensionsArea"></div>
+
+      <div class="card">
+        <div class="card-title">🧠 AI 面试总结</div>
+        <div class="btn-group" style="margin-top:0; margin-bottom: 16px;">
+          <button class="btn btn-primary" id="btnAiSummary" onclick="generateAISummary()">🤖 生成 AI 总结</button>
+          <button class="btn btn-secondary" onclick="copyAiSummary()">📋 复制总结</button>
+        </div>
+        <div class="ai-summary-content md-render" id="aiSummaryContent">
+          <span style="color:var(--gray-400)">点击上方按钮，AI 将根据评分数据生成专业的面试总结...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页面：候选人对比 -->
+    <div class="page" id="page-compare">
+      <h2 class="page-title">📊 候选人对比分析</h2>
+      <p class="page-desc">选择 2 位或以上候选人，AI 生成全面的对比报告（仅支持同一岗位横向对比）</p>
+
+      <div class="card">
+        <div class="card-title">选择要对比的候选人</div>
+        <div style="font-size:13px; color:var(--gray-500); margin-bottom:16px;" id="compareHint">请选择同一岗位下的候选人进行对比</div>
+        <div class="compare-grid" id="compareGrid"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btnCompare" onclick="runComparison()">🤖 AI 对比分析</button>
+        </div>
+      </div>
+
+      <div id="compareResult" style="display:none;">
+        <div class="card">
+          <div class="card-title">📋 对比分析报告</div>
+          <div class="md-render" id="compareContent"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- 确认弹窗 -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h3 id="confirmTitle">确认操作</h3>
+    <p id="confirmText" style="font-size:14px; color:var(--gray-600); margin-bottom:20px;"></p>
+    <div class="btn-group" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeConfirm()">取消</button>
+      <button class="btn btn-danger" id="confirmOk" onclick="confirmAction()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI 配置弹窗 -->
+<div class="modal-overlay" id="aiConfigModal">
+  <div class="modal-box">
+    <h3>🤖 AI 服务配置</h3>
+    <p class="modal-desc">选择一个 AI 服务提供商，输入 API Key 即可。页面配置会优先于 `.env` 与本地 Ollama。</p>
+
+    <div class="preset-chips" id="presetChips"></div>
+
+    <div class="form-group">
+      <label>API Key / Token Plan Key</label>
+      <input type="password" id="cfgApiKey" placeholder="输入 API Key 或 Token Plan Key">
+      <div class="hint" id="cfgKeyHint"></div>
+    </div>
+
+    <div class="form-group">
+      <label>API 地址</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.deepseek.com">
+    </div>
+
+    <div class="form-group">
+      <label>模型名称</label>
+      <input type="text" id="cfgModel" placeholder="deepseek-chat">
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeAiConfig()">取消</button>
+      <button class="btn btn-ghost" onclick="resetAiConfig()" style="color:var(--danger)">清除页面配置</button>
+      <button class="btn btn-primary" id="btnSaveAiConfig" onclick="saveAiConfig()">验证并保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 全局状态 ==========
+const STATE = {
+  currentPage: 'page-new',
+  currentCardId: null,
+  generatedDimensions: null,
+  scorecards: [],
+  compareSelected: new Set(),
+  confirmCallback: null,
+  aiConfigured: false,
+  presets: [],
+};
+
+// ========== 工具函数 ==========
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function showConfirm(title, text, callback) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmText').textContent = text;
+  STATE.confirmCallback = callback;
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('show');
+  STATE.confirmCallback = null;
+}
+
+function confirmAction() {
+  if (STATE.confirmCallback) STATE.confirmCallback();
+  closeConfirm();
+}
+
+async function api(url, options = {}) {
+  const resp = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  return resp.json();
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+  const lines = html.split('\n');
+  let inTable = false, tableHtml = '';
+  const result = [];
+  for (const line of lines) {
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      if (!inTable) { inTable = true; tableHtml = '<table>'; }
+      const cells = line.split('|').filter(c => c.trim());
+      if (cells.every(c => /^[\s-:]+$/.test(c))) continue;
+      const isHeader = !tableHtml.includes('<td>');
+      const tag = isHeader ? 'th' : 'td';
+      tableHtml += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    } else {
+      if (inTable) { result.push(tableHtml + '</table>'); inTable = false; tableHtml = ''; }
+      result.push(line);
+    }
+  }
+  if (inTable) result.push(tableHtml + '</table>');
+  return result.join('\n').replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>');
+}
+
+// ========== AI 状态检测 ==========
+async function checkAiStatus() {
+  const dot = document.getElementById('aiDot');
+  const label = document.getElementById('aiLabel');
+  const hint = document.getElementById('aiHint');
+
+  dot.className = 'status-dot detecting';
+  label.textContent = '检测 AI 服务中...';
+
+  try {
+    const data = await api('/api/ai/status');
+    if (data.configured) {
+      STATE.aiConfigured = true;
+      dot.className = 'status-dot online';
+      const providerLabel = data.provider ? ` · ${data.provider}` : '';
+      label.textContent = `✅ ${data.label}${providerLabel}：${data.model}`;
+      if (data.source === 'ollama') {
+        hint.textContent = '自动检测到本地 Ollama · 点击切换';
+      } else if (data.source === 'env') {
+        hint.textContent = '已从 .env 加载 · 点击可改为页面配置';
+      } else {
+        hint.textContent = '已保存页面配置 · 点击修改';
+      }
+    } else {
+      STATE.aiConfigured = false;
+      dot.className = 'status-dot offline';
+      label.textContent = '⚠️ AI 未连接';
+      hint.textContent = data.hint || '点击配置 AI 服务';
+    }
+  } catch (err) {
+    STATE.aiConfigured = false;
+    dot.className = 'status-dot offline';
+    label.textContent = '⚠️ 服务连接失败';
+    hint.textContent = '点击重新配置';
+  }
+}
+
+// ========== AI 配置弹窗 ==========
+async function openAiConfigModal() {
+  document.getElementById('aiConfigModal').classList.add('show');
+  STATE.selectedPresetId = '';
+
+  // 加载预设
+  if (!STATE.presets.length) {
+    try {
+      STATE.presets = await api('/api/ai/presets');
+    } catch (e) {
+      STATE.presets = [];
+    }
+  }
+
+  const chips = document.getElementById('presetChips');
+  chips.innerHTML = STATE.presets.map((p, i) => `
+    <span class="preset-chip" data-idx="${i}" onclick="selectPreset(${i})">${p.name}</span>
+  `).join('');
+}
+
+function selectPreset(idx) {
+  const p = STATE.presets[idx];
+  STATE.selectedPresetId = p.id || '';
+  document.getElementById('cfgBaseUrl').value = p.baseUrl;
+  document.getElementById('cfgModel').value = p.model;
+  document.getElementById('cfgKeyHint').textContent = p.hint || '';
+  document.getElementById('cfgApiKey').placeholder = p.id === 'minimax_token_plan'
+    ? '输入 Token Plan Key（如 sk-cp-...）'
+    : '输入 API Key 或 Token Plan Key';
+
+  // 高亮选中
+  document.querySelectorAll('.preset-chip').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+}
+
+function closeAiConfig() {
+  document.getElementById('aiConfigModal').classList.remove('show');
+}
+
+async function saveAiConfig() {
+  const apiKey = document.getElementById('cfgApiKey').value.trim();
+  const baseUrl = document.getElementById('cfgBaseUrl').value.trim();
+  const model = document.getElementById('cfgModel').value.trim();
+
+  if (!apiKey) {
+    toast('请输入 API Key 或 Token Plan Key', 'error');
+    return;
+  }
+
+  const selectedPreset = STATE.presets.find(p => p.id === STATE.selectedPresetId);
+  const inferredProviderId = apiKey.startsWith('sk-cp-') ? 'minimax_token_plan' : '';
+  const providerName = selectedPreset?.id || inferredProviderId;
+
+  const btn = document.getElementById('btnSaveAiConfig');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 验证连接中...';
+
+  try {
+    const result = await api('/api/ai/configure', {
+      method: 'POST',
+      body: { apiKey, baseUrl, model, providerName },
+    });
+
+    if (result.error) {
+      toast(result.error, 'error');
+    } else {
+      const providerLabel = result.provider ? `${result.provider} · ` : '';
+      toast(`AI 配置成功：${providerLabel}${result.model}`, 'success');
+      closeAiConfig();
+      checkAiStatus();
+    }
+  } catch (err) {
+    toast('配置失败: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '验证并保存';
+  }
+}
+
+async function resetAiConfig() {
+  try {
+    await api('/api/ai/reset', { method: 'POST' });
+    toast('已清除页面配置，将回退到 .env 或 Ollama', 'info');
+    closeAiConfig();
+    checkAiStatus();
+  } catch (err) {
+    toast('重置失败', 'error');
+  }
+}
+
+// 在需要 AI 时自动检测并引导
+function ensureAi() {
+  if (!STATE.aiConfigured) {
+    toast('请先配置 AI 服务（点击左下角状态栏）', 'error');
+    openAiConfigModal();
+    return false;
+  }
+  return true;
+}
+
+// ========== 页面导航 ==========
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.remove('active'));
+  const navBtn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  STATE.currentPage = pageId;
+  if (pageId === 'page-compare') loadCompareGrid();
+}
+
+function showScorecardPage(cardId) {
+  STATE.currentCardId = cardId;
+  showPage('page-scorecard');
+  loadScorecard(cardId);
+  document.querySelectorAll('.history-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === cardId);
+  });
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b => b.classList.remove('active'));
+}
+
+// ========== 新建评分表 ==========
+async function generateDimensions() {
+  if (!ensureAi()) return;
+
+  const jd = document.getElementById('jdInput').value.trim();
+  if (!jd || jd.length < 30) {
+    toast('请输入至少 30 个字符的 JD 内容', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnGenerate');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> AI 正在分析 JD...';
+
+  try {
+    const result = await api('/api/ai/generate-dimensions', {
+      method: 'POST',
+      body: { jd },
+    });
+
+    if (result.error) {
+      toast(result.error, 'error');
+      return;
+    }
+
+    STATE.generatedDimensions = result.data;
+    renderDimensionsPreview(result.data);
+    document.getElementById('dimensionsPreview').style.display = 'block';
+    document.getElementById('dimensionsPreview').scrollIntoView({ behavior: 'smooth' });
+    toast('评分维度生成成功！', 'success');
+  } catch (err) {
+    toast('请求失败: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 生成评分维度';
+  }
+}
+
+function renderDimensionsPreview(data) {
+  const container = document.getElementById('dimensionsPreviewContent');
+  const config = STATE.aiConfigured ? '' : '';
+  let html = `<p style="font-size:16px; font-weight:600; margin-bottom:4px;">📌 岗位：${data.jobTitle}</p>`;
+  html += `<p style="font-size:12px; color:var(--gray-400); margin-bottom:16px;">以下维度由 AI 根据 JD 自动生成，你可以点击"编辑维度"进行调整</p>`;
+  data.dimensions.forEach((dim, i) => {
+    html += `<div style="background:var(--gray-50); border-radius:8px; padding:14px; margin-bottom:10px;">
+      <div style="font-weight:600; font-size:14px; margin-bottom:8px;">维度 ${i + 1}：${dim.name}</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        ${dim.items.map(item => `<div style="font-size:13px; color:var(--gray-600);">• ${item.label}</div>`).join('')}
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function openEditDimensions() {
+  if (!STATE.generatedDimensions) return;
+  const data = STATE.generatedDimensions;
+  const container = document.getElementById('editDimensionsContent');
+
+  let html = `<div class="form-group">
+    <label>岗位名称</label>
+    <input type="text" id="editJobTitle" value="${data.jobTitle}">
+  </div>`;
+
+  data.dimensions.forEach((dim, i) => {
+    html += `<div style="background:var(--gray-50); border-radius:8px; padding:14px; margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:8px;">
+        <label style="font-weight:600;">维度 ${i + 1} 名称</label>
+        <input type="text" class="edit-dim-name" data-idx="${i}" value="${dim.name}">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        ${dim.items.map((item, j) => `<input type="text" class="edit-dim-item" data-dim="${i}" data-item="${j}" value="${item.label}" style="font-size:13px;">`).join('')}
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('editDimensionsModal').classList.add('show');
+}
+
+function closeEditDimensions() {
+  document.getElementById('editDimensionsModal').classList.remove('show');
+}
+
+function saveEditedDimensions() {
+  if (!STATE.generatedDimensions) return;
+
+  const jobTitle = document.getElementById('editJobTitle').value.trim();
+  if (!jobTitle) { toast('岗位名称不能为空', 'error'); return; }
+
+  STATE.generatedDimensions.jobTitle = jobTitle;
+
+  document.querySelectorAll('.edit-dim-name').forEach(el => {
+    const idx = parseInt(el.dataset.idx);
+    const val = el.value.trim();
+    if (val) STATE.generatedDimensions.dimensions[idx].name = val;
+  });
+
+  document.querySelectorAll('.edit-dim-item').forEach(el => {
+    const dimIdx = parseInt(el.dataset.dim);
+    const itemIdx = parseInt(el.dataset.item);
+    const val = el.value.trim();
+    if (val) STATE.generatedDimensions.dimensions[dimIdx].items[itemIdx].label = val;
+  });
+
+  renderDimensionsPreview(STATE.generatedDimensions);
+  closeEditDimensions();
+  toast('维度已更新', 'success');
+}
+
+async function confirmAndCreateScorecard() {
+  if (!STATE.generatedDimensions) return;
+  const result = await api('/api/scorecards', {
+    method: 'POST',
+    body: {
+      jobTitle: STATE.generatedDimensions.jobTitle,
+      dimensions: STATE.generatedDimensions.dimensions,
+      maxScore: 100,
+    },
+  });
+
+  if (result.success) {
+    toast('评分表创建成功！', 'success');
+    await loadHistory();
+    showScorecardPage(result.id);
+    STATE.generatedDimensions = null;
+    document.getElementById('dimensionsPreview').style.display = 'none';
+    document.getElementById('jdInput').value = '';
+  }
+}
+
+// ========== 评分表操作 ==========
+async function loadScorecard(cardId) {
+  const data = await api(`/api/scorecards/${cardId}`);
+  if (data.error) { toast(data.error, 'error'); return; }
+  document.getElementById('scJobTitle').textContent = `📋 ${data.job_title}`;
+  document.getElementById('scCandidateName').value = data.candidate_name || '';
+  renderScorecard(data);
+}
+
+function renderScorecard(data) {
+  const dimensions = data.dimensions;
+  const scores = data.scores || {};
+
+  let totalScore = 0;
+  let dimScores = [];
+  dimensions.forEach(dim => {
+    let dimTotal = 0;
+    dim.items.forEach(item => {
+      const key = `d${dim.id}_${item.label}`;
+      dimTotal += (scores[key] || 0);
+    });
+    dimScores.push({ name: dim.name, score: dimTotal, max: dim.max });
+    totalScore += dimTotal;
+  });
+
+  const pct = Math.round(totalScore / data.max_score * 100);
+  const cls = pct >= 75 ? 'good' : pct >= 50 ? 'mid' : 'low';
+
+  document.getElementById('scoreOverview').innerHTML = `
+    <div class="score-overview-card">
+      <div class="label">总分</div>
+      <div class="value ${cls}">${totalScore}</div>
+      <div class="sub">满分 ${data.max_score}</div>
+    </div>
+    <div class="score-overview-card">
+      <div class="label">百分比</div>
+      <div class="value ${cls}">${pct}%</div>
+      <div class="sub">${pct >= 75 ? '优秀' : pct >= 50 ? '中等' : '待提升'}</div>
+    </div>
+    ${dimScores.map(d => `
+      <div class="score-overview-card">
+        <div class="label">${d.name}</div>
+        <div class="value" style="font-size:20px;">${d.score}</div>
+        <div class="sub">/ ${d.max}</div>
+      </div>
+    `).join('')}
+  `;
+
+  let dimHtml = '';
+  dimensions.forEach(dim => {
+    let dimTotal = 0;
+    let itemsHtml = '';
+    dim.items.forEach(item => {
+      const key = `d${dim.id}_${item.label}`;
+      const val = scores[key] || 0;
+      dimTotal += val;
+      itemsHtml += `
+        <div class="score-item">
+          <div class="score-item-info">
+            <div class="score-item-label">${item.label}</div>
+            <div class="score-item-guide" title="${(item.guide || '').replace(/"/g, '&quot;')}">${(item.guide || '').replace(/\n/g, ' | ')}</div>
+          </div>
+          <div class="star-rating" data-key="${key}" data-value="${val}">
+            ${[1,2,3,4,5].map(s => `<span class="star ${s <= val ? 'active' : ''}" data-score="${s}" onclick="setScore('${key}', ${s})" onmouseenter="previewStars(this)" onmouseleave="resetStars(this)">★</span>`).join('')}
+          </div>
+        </div>
+      `;
+    });
+    dimHtml += `
+      <div class="dimension-card">
+        <div class="dimension-header">
+          <div class="dimension-name">${dim.name}</div>
+          <div class="dimension-score" id="dimScore_${dim.id}">${dimTotal} / ${dim.max}</div>
+        </div>
+        <div class="dimension-items">${itemsHtml}</div>
+      </div>
+    `;
+  });
+  document.getElementById('dimensionsArea').innerHTML = dimHtml;
+
+  if (data.ai_summary) {
+    document.getElementById('aiSummaryContent').innerHTML = renderMarkdown(data.ai_summary);
+    document.getElementById('aiSummaryContent').dataset.raw = data.ai_summary;
+  }
+
+  drawRadar(dimScores);
+}
+
+function setScore(key, score) {
+  const container = document.querySelector(`.star-rating[data-key="${key}"]`);
+  const current = parseInt(container.dataset.value || 0);
+  const newScore = (current === score) ? 0 : score;
+  container.dataset.value = newScore;
+  container.querySelectorAll('.star').forEach(s => {
+    const v = parseInt(s.dataset.score);
+    s.classList.toggle('active', v <= newScore);
+    s.classList.remove('hover-preview');
+  });
+  updateScores();
+}
+
+function previewStars(starEl) {
+  const container = starEl.parentElement;
+  const hoverScore = parseInt(starEl.dataset.score);
+  container.querySelectorAll('.star').forEach(s => {
+    const v = parseInt(s.dataset.score);
+    if (v <= hoverScore && !s.classList.contains('active')) s.classList.add('hover-preview');
+  });
+}
+
+function resetStars(starEl) {
+  starEl.parentElement.querySelectorAll('.star').forEach(s => s.classList.remove('hover-preview'));
+}
+
+function updateScores() {
+  const scores = {};
+  let totalScore = 0;
+  document.querySelectorAll('.star-rating').forEach(el => {
+    const key = el.dataset.key;
+    const val = parseInt(el.dataset.value || 0);
+    scores[key] = val;
+    totalScore += val;
+  });
+
+  document.querySelectorAll('[id^="dimScore_"]').forEach(el => {
+    const dimId = el.id.replace('dimScore_', '');
+    let dimTotal = 0;
+    document.querySelectorAll(`.star-rating[data-key^="d${dimId}_"]`).forEach(r => {
+      dimTotal += parseInt(r.dataset.value || 0);
+    });
+    el.textContent = `${dimTotal} / 20`;
+  });
+
+  const overviewCards = document.querySelectorAll('.score-overview-card .value');
+  if (overviewCards[0]) overviewCards[0].textContent = totalScore;
+  if (overviewCards[1]) overviewCards[1].textContent = Math.round(totalScore) + '%';
+
+  autoSave(scores, totalScore);
+}
+
+let autoSaveTimer = null;
+function autoSave(scores, totalScore) {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async () => {
+    if (!STATE.currentCardId) return;
+    const name = document.getElementById('scCandidateName').value.trim();
+    const aiSummary = document.getElementById('aiSummaryContent').dataset.raw || '';
+    await api(`/api/scorecards/${STATE.currentCardId}`, {
+      method: 'PUT',
+      body: { candidateName: name, scores, totalScore, aiSummary },
+    });
+    loadHistory();
+  }, 800);
+}
+
+function onCandidateNameChange() {
+  const scores = {};
+  let total = 0;
+  document.querySelectorAll('.star-rating').forEach(el => {
+    scores[el.dataset.key] = parseInt(el.dataset.value || 0);
+    total += parseInt(el.dataset.value || 0);
+  });
+  autoSave(scores, total);
+}
+
+async function saveScorecard() {
+  const scores = {};
+  let total = 0;
+  document.querySelectorAll('.star-rating').forEach(el => {
+    scores[el.dataset.key] = parseInt(el.dataset.value || 0);
+    total += parseInt(el.dataset.value || 0);
+  });
+  const name = document.getElementById('scCandidateName').value.trim();
+  const aiSummary = document.getElementById('aiSummaryContent').dataset.raw || '';
+  await api(`/api/scorecards/${STATE.currentCardId}`, {
+    method: 'PUT',
+    body: { candidateName: name, scores, totalScore: total, aiSummary },
+  });
+  toast('已保存', 'success');
+  loadHistory();
+}
+
+async function deleteCurrentScorecard() {
+  showConfirm('删除评分表', '确定要删除这份评分表吗？此操作不可撤销。', async () => {
+    await api(`/api/scorecards/${STATE.currentCardId}`, { method: 'DELETE' });
+    toast('已删除', 'success');
+    STATE.currentCardId = null;
+    await loadHistory();
+    showPage('page-new');
+  });
+}
+
+// ========== AI 总结 ==========
+async function generateAISummary() {
+  if (!ensureAi()) return;
+
+  const btn = document.getElementById('btnAiSummary');
+  const container = document.getElementById('aiSummaryContent');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> AI 正在分析...';
+  container.innerHTML = '<div class="loading"><span class="spinner spinner-dark"></span> AI 正在生成面试总结，请稍候...</div>';
+  container.classList.add('loading');
+
+  try {
+    const data = await api(`/api/scorecards/${STATE.currentCardId}`);
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    const dimSummary = data.dimensions.map(dim => {
+      let items = dim.items.map(item => {
+        const key = `d${dim.id}_${item.label}`;
+        return { label: item.label, score: data.scores[key] || 0, maxScore: 5 };
+      });
+      const dimTotal = items.reduce((s, i) => s + i.score, 0);
+      return {
+        name: dim.name, score: dimTotal, maxScore: dim.max,
+        percentage: Math.round(dimTotal / dim.max * 100) + '%',
+        isStrength: dimTotal >= dim.strengthThreshold,
+        isRisk: dimTotal <= dim.riskThreshold,
+        items,
+      };
+    });
+
+    const result = await api('/api/ai/generate-summary', {
+      method: 'POST',
+      body: {
+        scorecard: {
+          candidateName: data.candidate_name || '未知候选人',
+          jobTitle: data.job_title,
+          totalScore: data.total_score,
+          maxScore: data.max_score,
+          dimensions: dimSummary,
+        },
+      },
+    });
+
+    if (result.error) {
+      toast(result.error, 'error');
+      container.innerHTML = `<span style="color:var(--danger)">${result.error}</span>`;
+    } else {
+      container.innerHTML = renderMarkdown(result.summary);
+      container.dataset.raw = result.summary;
+      await api(`/api/scorecards/${STATE.currentCardId}`, {
+        method: 'PUT',
+        body: {
+          candidateName: data.candidate_name,
+          scores: data.scores,
+          totalScore: data.total_score,
+          aiSummary: result.summary,
+        },
+      });
+    }
+  } catch (err) {
+    toast('AI 总结失败: ' + err.message, 'error');
+    container.innerHTML = `<span style="color:var(--danger)">请求失败</span>`;
+  } finally {
+    container.classList.remove('loading');
+    btn.disabled = false;
+    btn.innerHTML = '🤖 生成 AI 总结';
+  }
+}
+
+function copyAiSummary() {
+  const raw = document.getElementById('aiSummaryContent').dataset.raw ||
+              document.getElementById('aiSummaryContent').innerText;
+  navigator.clipboard.writeText(raw).then(() => toast('已复制到剪贴板', 'success'));
+}
+
+function normalizeJobTitle(value) {
+  return (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getCompareLockedJobTitle() {
+  const selectedCard = document.querySelector('.compare-candidate-card.selected');
+  return selectedCard ? selectedCard.dataset.jobTitle || '' : '';
+}
+
+function refreshCompareAvailability() {
+  const lockedJobTitle = getCompareLockedJobTitle();
+  const lockedKey = normalizeJobTitle(lockedJobTitle);
+  const hint = document.getElementById('compareHint');
+
+  document.querySelectorAll('.compare-candidate-card').forEach(el => {
+    const sameJob = normalizeJobTitle(el.dataset.jobTitle) === lockedKey;
+    const disabled = lockedKey && !STATE.compareSelected.has(el.dataset.id) && !sameJob;
+    el.classList.toggle('disabled', Boolean(disabled));
+  });
+
+  if (!hint) return;
+  hint.textContent = lockedJobTitle
+    ? `已锁定岗位：${lockedJobTitle}，请选择同岗位候选人继续对比`
+    : '请选择同一岗位下的候选人进行对比';
+}
+
+// ========== 候选人对比 ==========
+async function loadCompareGrid() {
+  const cards = await api('/api/scorecards');
+  const grid = document.getElementById('compareGrid');
+
+  if (!cards.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="icon">📋</div>
+      <div class="title">暂无评分表</div>
+      <div class="desc">请先新建评分表并完成评分</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = cards.map(c => {
+    const selected = STATE.compareSelected.has(c.id);
+    const name = c.candidate_name || '未命名候选人';
+    const jobTitle = String(c.job_title || '').replace(/"/g, '&quot;');
+    return `
+      <div class="compare-candidate-card ${selected ? 'selected' : ''}" data-id="${c.id}" data-job-title="${jobTitle}" onclick="toggleCompareSelect(this)">
+        <div class="check">${selected ? '✓' : ''}</div>
+        <div class="compare-candidate-info">
+          <div class="name">${name}</div>
+          <div class="meta">${c.job_title} · ${c.updated_at?.slice(0, 10) || ''}</div>
+        </div>
+        <div class="score-badge">${c.total_score}分</div>
+      </div>
+    `;
+  }).join('');
+
+  refreshCompareAvailability();
+}
+
+function toggleCompareSelect(el) {
+  const id = el.dataset.id;
+  const lockedJobTitle = getCompareLockedJobTitle();
+
+  if (el.classList.contains('disabled')) {
+    toast(`当前已锁定岗位「${lockedJobTitle}」，请按岗位分别对比`, 'error');
+    return;
+  }
+
+  if (STATE.compareSelected.has(id)) {
+    STATE.compareSelected.delete(id);
+    el.classList.remove('selected');
+    el.querySelector('.check').textContent = '';
+  } else {
+    STATE.compareSelected.add(id);
+    el.classList.add('selected');
+    el.querySelector('.check').textContent = '✓';
+  }
+
+  refreshCompareAvailability();
+}
+
+async function runComparison() {
+  if (!ensureAi()) return;
+
+  if (STATE.compareSelected.size < 2) {
+    toast('请至少选择 2 位候选人进行对比', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnCompare');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> AI 正在对比分析...';
+
+  try {
+    const candidates = [];
+    for (const id of STATE.compareSelected) {
+      const data = await api(`/api/scorecards/${id}`);
+      if (data.error) continue;
+      const dimSummary = data.dimensions.map(dim => {
+        let items = dim.items.map(item => {
+          const key = `d${dim.id}_${item.label}`;
+          return { label: item.label, score: data.scores[key] || 0 };
+        });
+        const dimTotal = items.reduce((s, i) => s + i.score, 0);
+        return { name: dim.name, score: dimTotal, maxScore: dim.max, items };
+      });
+      candidates.push({
+        candidateName: data.candidate_name || '未命名',
+        jobTitle: data.job_title,
+        totalScore: data.total_score,
+        maxScore: data.max_score,
+        dimensions: dimSummary,
+      });
+    }
+
+    const result = await api('/api/ai/compare-candidates', {
+      method: 'POST',
+      body: { candidates },
+    });
+
+    if (result.error) {
+      toast(result.error, 'error');
+    } else {
+      document.getElementById('compareContent').innerHTML = renderMarkdown(result.analysis);
+      document.getElementById('compareResult').style.display = 'block';
+      document.getElementById('compareResult').scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (err) {
+    toast('对比分析失败: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 对比分析';
+  }
+}
+
+// ========== 雷达图 ==========
+function drawRadar(dimScores) {
+  const canvas = document.getElementById('radarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.36;
+  const n = dimScores.length;
+  if (!n) return;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const levels = 5;
+  for (let l = 1; l <= levels; l++) {
+    ctx.beginPath();
+    const r = R * l / levels;
+    for (let i = 0; i <= n; i++) {
+      const angle = (Math.PI * 2 / n) * i - Math.PI / 2;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#E5E7EB';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < n; i++) {
+    const angle = (Math.PI * 2 / n) * i - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+    ctx.strokeStyle = '#D1D5DB';
+    ctx.stroke();
+
+    const lx = cx + (R + 24) * Math.cos(angle);
+    const ly = cy + (R + 24) * Math.sin(angle);
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.fillStyle = '#4B5563';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(dimScores[i].name, lx, ly);
+  }
+
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const idx = i % n;
+    const pct = dimScores[idx].score / dimScores[idx].max;
+    const angle = (Math.PI * 2 / n) * idx - Math.PI / 2;
+    const x = cx + R * pct * Math.cos(angle);
+    const y = cy + R * pct * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(79, 70, 229, 0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#4F46E5';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  for (let i = 0; i < n; i++) {
+    const pct = dimScores[i].score / dimScores[i].max;
+    const angle = (Math.PI * 2 / n) * i - Math.PI / 2;
+    const x = cx + R * pct * Math.cos(angle);
+    const y = cy + R * pct * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#4F46E5';
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// ========== 历史列表 ==========
+async function loadHistory() {
+  const cards = await api('/api/scorecards');
+  STATE.scorecards = cards;
+  const list = document.getElementById('historyList');
+
+  if (!cards.length) {
+    list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--gray-400); font-size:13px;">暂无评分表</div>`;
+    return;
+  }
+
+  list.innerHTML = cards.map(c => `
+    <div class="history-item ${STATE.currentCardId === c.id ? 'active' : ''}" data-id="${c.id}" onclick="showScorecardPage('${c.id}')">
+      <div class="item-title">${c.candidate_name || '未命名候选人'}</div>
+      <div class="item-meta">
+        <span>${c.job_title}</span>
+        <span class="item-score">${c.total_score}分</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ========== 初始化 ==========
+document.addEventListener('DOMContentLoaded', () => {
+  loadHistory();
+  checkAiStatus();
+});
+</script>
+</body>
+</html>
