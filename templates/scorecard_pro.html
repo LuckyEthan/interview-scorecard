@@ -1675,7 +1675,38 @@ async function doCompareAiAnalysis(cands){
 // Simple Markdown to HTML converter for AI analysis results
 function _md2html(md){
   if(!md)return '';
-  return md
+  // Step 1: Extract tables into placeholders to protect from HTML escaping
+  const tables = [];
+  md = md.replace(/((?:^\|.+\|[ \t]*$\n?){2,})/gm, function(block){
+    const lines = block.trim().split('\n').map(l=>l.trim()).filter(l=>l);
+    if(lines.length < 2) return block;
+    let html = '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px">';
+    let headerDone = false;
+    for(let i=0; i<lines.length; i++){
+      const line = lines[i];
+      const inner = line.replace(/^\||\|$/g, '');
+      const cells = inner.split('|').map(c=>c.trim());
+      // Skip separator row
+      if(cells.every(c=>/^[\s:]*-{1,}[\s:]*$/.test(c))){
+        headerDone = true;
+        continue;
+      }
+      const isHead = !headerDone && i === 0;
+      const tag = isHead ? 'th' : 'td';
+      const style = isHead
+        ? 'padding:6px 10px;border:1px solid var(--bg3);text-align:left;background:var(--bg2);font-weight:600'
+        : 'padding:6px 10px;border:1px solid var(--bg3);text-align:left';
+      html += '<tr>' + cells.map(c=>`<${tag} style="${style}">${c.replace(/\*\*/g,'')}</${tag}>`).join('') + '</tr>';
+      if(isHead) headerDone = true;
+    }
+    html += '</table>';
+    const idx = tables.length;
+    tables.push(html);
+    return '\n%%TABLE_' + idx + '%%\n';
+  });
+
+  // Step 2: Normal markdown transforms (tables are now safe placeholders)
+  let result = md
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     // Headers
     .replace(/^### (.+)$/gm,'<h4 style="margin:12px 0 6px;font-size:14px;font-weight:600">$1</h4>')
@@ -1690,20 +1721,18 @@ function _md2html(md){
     .replace(/^\d+\.\s+(.+)$/gm,'<li style="margin:2px 0;line-height:1.6">$1</li>')
     // Wrap consecutive <li> in <ul>
     .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g,'<ul style="padding-left:20px;margin:6px 0">$1</ul>')
-    // Simple table support
-    .replace(/^\|(.+)\|$/gm,(match,inner)=>{
-      const cells=inner.split('|').map(c=>c.trim());
-      if(cells.every(c=>/^[-:]+$/.test(c)))return ''; // separator row
-      const tag=cells.some(c=>/\*\*/.test(c))?'th':'td';
-      return '<tr>'+cells.map(c=>`<${tag} style="padding:6px 10px;border:1px solid var(--bg3);text-align:left">${c}</${tag}>`).join('')+'</tr>';
-    })
-    .replace(/((?:<tr>.*<\/tr>\n?)+)/g,'<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px">$1</table>')
     // Horizontal rules
     .replace(/^---+$/gm,'<hr style="border:none;border-top:1px solid var(--bg3);margin:12px 0">')
     // Paragraphs (double newline)
     .replace(/\n\n/g,'</p><p style="margin:8px 0;line-height:1.6">')
     // Single newlines to <br>
     .replace(/\n/g,'<br>');
+
+  // Step 3: Restore tables from placeholders
+  for(let i=0; i<tables.length; i++){
+    result = result.replace('%%TABLE_' + i + '%%', tables[i]);
+  }
+  return result;
 }
 
 function renderCompareAiResult(analysis, cands){
