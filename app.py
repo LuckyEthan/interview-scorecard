@@ -469,6 +469,7 @@ def extract_json_from_ai_response(raw_text):
     - 纯 JSON
     - ```json ... ``` 或 ``` ... ``` 代码块
     - <think>...</think> 思考标签包裹
+    - reasoning_content / content 混合
     - JSON 前后有自然语言说明
     """
     if not raw_text:
@@ -478,6 +479,10 @@ def extract_json_from_ai_response(raw_text):
 
     # 1. 移除 <think>...</think> 标签（MiniMax M2.7 常见）
     text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.DOTALL).strip()
+
+    # 1.5 移除其他常见思考标签
+    text = _re.sub(r"<reasoning>.*?</reasoning>", "", text, flags=_re.DOTALL).strip()
+    text = _re.sub(r"<\|thinking\|>.*?<\|/thinking\|>", "", text, flags=_re.DOTALL).strip()
 
     # 2. 提取 ```json ... ``` 或 ``` ... ``` 代码块
     code_block_match = _re.search(r"```(?:json)?\s*\n?(.*?)```", text, _re.DOTALL)
@@ -491,19 +496,155 @@ def extract_json_from_ai_response(raw_text):
     except json.JSONDecodeError:
         pass
 
-    # 4. 尝试从文本中找到第一个 { 到最后一个 } 之间的内容
+    # 4. 尝试从文本中找到第一个 { 到最后一个 } 之间的内容（使用括号匹配）
     first_brace = text.find("{")
-    last_brace = text.rfind("}")
-    if first_brace != -1 and last_brace > first_brace:
-        candidate = text[first_brace:last_brace + 1]
-        try:
-            json.loads(candidate)
-            return candidate
-        except json.JSONDecodeError:
-            pass
+    if first_brace != -1:
+        # 尝试从最后一个 } 开始
+        last_brace = text.rfind("}")
+        if last_brace > first_brace:
+            candidate = text[first_brace:last_brace + 1]
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                pass
+
+        # 尝试括号平衡匹配找到正确的 JSON 边界
+        depth = 0
+        in_string = False
+        escape_next = False
+        for i in range(first_brace, len(text)):
+            c = text[i]
+            if escape_next:
+                escape_next = False
+                continue
+            if c == '\\' and in_string:
+                escape_next = True
+                continue
+            if c == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if not in_string:
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[first_brace:i + 1]
+                        try:
+                            json.loads(candidate)
+                            return candidate
+                        except json.JSONDecodeError:
+                            break
 
     # 5. 都失败了，返回原始清理后的文本让上层报错
     return text
+
+
+
+def repair_json_text(raw):
+    """尝试修复常见的 AI 返回 JSON 格式错误。"""
+    text = raw.strip()
+    # 移除 trailing commas before } or ]
+    text = _re.sub(r',\s*([}\]])', r'\1', text)
+    # 修复连续逗号
+    text = _re.sub(r',\s*,+', ',', text)
+    # 修复多余的引号（如 "" " → "）
+    text = _re.sub(r'"\s*"(\s*[,}\]])', r'"\1', text)
+    # 修复 key 后多余空格和逗号（如 "key": "value" , , "key2"）
+    text = _re.sub(r',(\s*),', r',', text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    return None
+
+
+def parse_ai_summary_fallback(raw_text):
+    """从残缺的 AI 返回文本中尽量提取结构化信息。"""
+    # 先清理思考标签
+    text = _re.sub(r"<think>.*?</think>", "", raw_text, flags=_re.DOTALL).strip()
+    text = _re.sub(r"```(?:json)?\s*\n?", "", text).replace("```", "").strip()
+
+    result = {
+        "overallAssessment": "",
+        "strengths": [],
+        "improvements": [],
+        "dimensionComments": {},
+        "recommendation": "hold",
+        "recommendationReason": "",
+        "nextSteps": [],
+    }
+
+    # 尝试用正则从残缺 JSON 中提取各字段
+    # overallAssessment
+    m = _re.search(r'"overallAssessment"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+    if m:
+        result["overallAssessment"] = m.group(1).replace('\\"', '"')
+
+    # recommendation
+    m = _re.search(r'"recommendation"\s*:\s*"((?:strong_hire|hire|hold|no_hire))"', text)
+    if m:
+        result["recommendation"] = m.group(1)
+
+    # recommendationReason
+    m = _re.search(r'"recommend(?:ation)?[Rr]eason"\s*:\s*"((?:[^"\\]|\\.)*)"', text)
+    if m:
+        result["recommendationReason"] = m.group(1).replace('\\"', '"')
+
+    # strengths - 提取数组中的字符串
+    m = _re.search(r'"strengths"\s*:\s*\[(.*?)\]', text, _re.DOTALL)
+    if m:
+        items = _re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))
+        result["strengths"] = [s.replace('\\"', '"') for s in items if s.strip()]
+
+    # improvements
+    m = _re.search(r'"improvements"\s*:\s*\[(.*?)\]', text, _re.DOTALL)
+    if m:
+        items = _re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))
+        result["improvements"] = [s.replace('\\"', '"') for s in items if s.strip()]
+
+    # nextSteps
+    m = _re.search(r'"nextSteps"\s*:\s*\[(.*?)\]', text, _re.DOTALL)
+    if m:
+        items = _re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))
+        result["nextSteps"] = [s.replace('\\"', '"') for s in items if s.strip()]
+
+    # dimensionComments - 提取键值对
+    m = _re.search(r'"dimensionComments"\s*:\s*\{(.*?)\}', text, _re.DOTALL)
+    if m:
+        pairs = _re.findall(r'"((?:[^"\\]|\\.)*?)"\s*:\s*"((?:[^"\\]|\\.)*?)"', m.group(1))
+        result["dimensionComments"] = {k.replace('\\"', '"'): v.replace('\\"', '"') for k, v in pairs}
+
+    # 如果没提取到 overallAssessment，用清理后的原始文本前 300 字
+    if not result["overallAssessment"]:
+        # 去掉 JSON 语法字符，只保留中文/英文可读内容
+        readable = _re.sub(r'[{}\[\]"\\]', '', text)
+        readable = _re.sub(r'\s+', ' ', readable).strip()
+        result["overallAssessment"] = readable[:300] if readable else "AI 分析内容请重新生成"
+
+    return result
+
+
+
+def format_numbers_in_ai_summary(obj):
+    """递归处理 AI 总结中的数字和文本，将浮点数统一保留两位小数。"""
+    if isinstance(obj, dict):
+        return {k: format_numbers_in_ai_summary(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [format_numbers_in_ai_summary(item) for item in obj]
+    if isinstance(obj, float):
+        return round(obj, 2)
+    if isinstance(obj, str):
+        # 将文本中的多位小数数字格式化为两位小数（如 3.456789 → 3.46）
+        def _fmt(m):
+            num_str = m.group(0)
+            try:
+                return f"{float(num_str):.2f}"
+            except ValueError:
+                return num_str
+        return _re.sub(r'\d+\.\d{3,}', _fmt, obj)
+    return obj
 
 
 
@@ -919,29 +1060,52 @@ def compare_candidates():
     if len(normalized_titles) > 1:
         return jsonify({"error": "候选人对比仅支持同一岗位，请按岗位分别对比"}), 400
 
-    system_prompt = """你是一位资深 HR 人才评估专家。请对比多位候选人的面试评分数据，给出一份**统一的对比分析结论**。
+    system_prompt = """你是一位资深 HR 人才评估专家。请对比多位候选人的面试评分数据，给出一份统一的对比分析结论。
 
-重要要求：
-- 不要分别单独总结每个候选人，而是将所有候选人放在一起进行横向对比，输出一段连贯的对比分析结论。
-- 结论中应分析各候选人相对于彼此的优劣势，而不是孤立地描述每个人。
+核心原则（必须严格遵守）：
+- **候选人名称必须完全按照输入数据中的原始姓名书写，禁止修改、缩写或使用其他称呼**
+- 加权总分是最重要的排名依据。总分更高的候选人，在没有重大红线问题的前提下，必须排在推荐顺序的前面
+- 禁止出现"总分低的候选人反而被优先推荐"的情况
+- 对比分析中必须显式引用各候选人的加权总分数值
+- 所有数字保留两位小数
 
 报告结构：
-1. **综合对比结论**：一段话概括所有候选人的整体对比情况，包括谁更优、差距在哪里
-2. **核心维度横向对比**（表格形式）：关键维度的分数和表现对比
-3. **优劣势对比分析**：结合各维度数据，对比分析各候选人的相对强项和短板
-4. **明确推荐建议**：
-   - 对于合适的候选人，说明推荐理由和建议推进的面试环节
-   - 对于明显不合适的候选人，**直接建议「先不推进流程」**，不要建议安排下一轮面试浪费时间，可以简要说明不推荐的原因
-   - 如果所有候选人都不理想，也要如实说明，建议暂不推进并考虑扩大候选人池
+1. **综合对比结论**：一段话概括，先明确按总分从高到低的排名，再分析差距
+2. **核心维度横向对比**：使用标准 Markdown 表格，格式必须严格如下：
 
-风格：客观、简洁、数据驱动、有明确决策参考价值。使用 Markdown 格式。"""
+| 维度名称 | 候选人A（得分） | 候选人B（得分） |
+|----------|----------------|----------------|
+| 维度1 | X.XX | X.XX |
+
+表头中必须使用候选人的完整真实姓名，不要用代号或缩写。
+3. **优劣势对比分析**：结合各维度数据对比分析
+4. **明确推荐建议**：严格按照加权总分从高到低排列推荐顺序
+
+风格：客观、简洁、数据驱动。使用 Markdown 格式。"""
+
+    # 按总分从高到低排序候选人，让 AI 更容易按正确顺序分析
+    sorted_candidates = sorted(candidates, key=lambda c: float(c.get('totalScore', 0)), reverse=True)
 
     candidates_info = []
-    for c in candidates:
+    for rank, c in enumerate(sorted_candidates, start=1):
+        total = c.get('totalScore', 0)
+        max_score = c.get('maxScore', 100)
+        # 将维度数据转为可读文本，避免传原始 JSON 给 AI 导致输出乱码
+        dims = c.get('dimensions', [])
+        dim_lines = []
+        for d in dims:
+            if isinstance(d, dict):
+                name = d.get('name', '未知')
+                avg = d.get('avg', 0)
+                weight = d.get('weight', 0)
+                weighted = d.get('weighted', 0)
+                dim_lines.append(f"  - {name}：平均 {round(avg, 2):.2f} 分（权重 {round(weight, 2):.2f}%，加权 {round(weighted, 2):.2f}）")
+        dim_text = "\n".join(dim_lines) if dim_lines else "  无维度数据"
+
         info = f"""
-### {c.get('candidateName', '未知')}
-- 总分: {c.get('totalScore', 0)} / {c.get('maxScore', 100)}
-- 各维度: {json.dumps(c.get('dimensions', []), ensure_ascii=False)}"""
+### 第{rank}名：{c.get('candidateName', '未知')}（加权总分：{round(total, 2):.2f} / {max_score}）
+- 各维度评分：
+{dim_text}"""
         comment = (c.get("comment") or "").strip()
         if comment:
             info += f"\n- 面试官评语: {comment}"
@@ -962,18 +1126,29 @@ def compare_candidates():
                 info += f"\n- AI 个人总结: {ai_summary.strip()}"
         candidates_info.append(info)
 
+    # 构建总分排名摘要
+    candidate_names = [c.get('candidateName', '未知') for c in sorted_candidates]
+    ranking_summary = "  ".join([
+        f"第{i}名 {c.get('candidateName','未知')}（{round(c.get('totalScore',0), 2):.2f}分）"
+        for i, c in enumerate(sorted_candidates, start=1)
+    ])
+
     user_prompt = f"""岗位: {job_titles[0]}
 
-以下是 {len(candidates)} 位候选人的面试评分数据：
+候选人名称（输出中必须使用这些名字，不能修改）：{', '.join(candidate_names)}
+
+总分排名（从高到低，推荐顺序必须与此一致）：{ranking_summary}
+
+以下是 {len(candidates)} 位候选人的面试评分数据（已按总分从高到低排列）：
 
 {''.join(candidates_info)}
 
-请进行全面的对比分析。"""
+请严格按照总分排名进行对比分析，总分更高的候选人必须被优先推荐。输出中的候选人姓名必须与上方名称完全一致。"""
 
     result, error = call_ai([
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
-    ], temperature=0.5)
+    ], temperature=0.3)
 
     if error:
         return jsonify({"error": error}), 500
@@ -1229,10 +1404,11 @@ def generate_pro_summary():
 3. improvements 基于 <3 分的维度
 4. dimensionComments 为每个维度写一句话
 5. nextSteps 只写面试流程内的行动，禁止写入职后建议
-6. recommendation 必须是四选一：strong_hire / hire / hold / no_hire"""
+6. recommendation 必须是四选一：strong_hire / hire / hold / no_hire
+7. 所有数字（分数、百分比等）统一保留两位小数，例如 3.50 分、25.00%"""
 
     dim_info = "\n".join([
-        f"- {d['name']}：平均 {d['avg']:.1f} 分（权重 {d['weight']}%，加权 {d['weighted']:.2f}）"
+        f"- {d['name']}：平均 {round(d['avg'], 2):.2f} 分（权重 {round(d['weight'], 2):.2f}%，加权 {round(d['weighted'], 2):.2f}）"
         for d in dim_scores
     ])
     evidence_info = "\n".join([f"维度{k}证据：{v}" for k, v in evidences.items() if v]) if evidences else "无行为证据记录"
@@ -1260,10 +1436,23 @@ def generate_pro_summary():
     try:
         cleaned = extract_json_from_ai_response(result)
         ai_summary = json.loads(cleaned)
+        ai_summary = format_numbers_in_ai_summary(ai_summary)
         ai_summary["generatedAt"] = datetime.now().isoformat()
         return jsonify({"success": True, "aiSummary": ai_summary})
     except (json.JSONDecodeError, ValueError):
-        return jsonify({"error": "AI 返回格式无法解析，请重试", "raw": result}), 500
+        # 尝试修复常见 JSON 格式错误（多余逗号、不配对引号等）
+        cleaned = extract_json_from_ai_response(result)
+        repaired = repair_json_text(cleaned)
+        if repaired and isinstance(repaired, dict):
+            repaired = format_numbers_in_ai_summary(repaired)
+            repaired["generatedAt"] = datetime.now().isoformat()
+            return jsonify({"success": True, "aiSummary": repaired})
+
+        # 修复也失败，用正则从残缺文本中提取各字段
+        ai_summary = parse_ai_summary_fallback(result)
+        ai_summary = format_numbers_in_ai_summary(ai_summary)
+        ai_summary["generatedAt"] = datetime.now().isoformat()
+        return jsonify({"success": True, "aiSummary": ai_summary})
 
 
 # ========== 前端页面 ==========
@@ -1297,12 +1486,12 @@ if __name__ == "__main__":
     except Exception:
         pass
 
-    print(f"\n🎯 面试评分系统已启动！")
+    print(f"\n[OK] 面试评分系统已启动！")
     print(f"   打开浏览器访问: http://localhost:{PORT}")
     if ai_config:
         source_label = "Ollama 本地模型" if ai_config["source"] == "ollama" else "自定义 API"
-        print(f"   ✅ AI 已就绪: {ai_config['model']}（{source_label}）")
+        print(f"   [AI] AI 已就绪: {ai_config['model']}（{source_label}）")
     else:
-        print(f"   ⚠️  未检测到 AI 服务，页面内可一键配置")
+        print(f"   [!] 未检测到 AI 服务，页面内可一键配置")
     print(f"   数据存储: {DB_PATH}\n")
     app.run(host="127.0.0.1", port=PORT, debug=False)
